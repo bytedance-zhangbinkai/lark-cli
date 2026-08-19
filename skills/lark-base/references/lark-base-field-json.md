@@ -41,6 +41,7 @@
 | `lookup` | `type` `name` `from` `select` `where` | `aggregate` |
 | `auto_number` | `type` `name` | `style.rules` |
 | `attachment` / `location` / `checkbox` | `type` `name` | 无 |
+| `button` | `type` `name` `button_config.title` | 无 |
 
 所有类型都可额外传 `description`；上表的“常见补充字段”只列类型特有配置。
 
@@ -510,6 +511,12 @@
 { "type": "checkbox", "name": "完成" }
 ```
 
+### 3.13 button
+
+```json
+{ "type": "button", "name": "按钮", "button_config": { "title": "点击按钮" } }
+```
+
 ## 4. 创建与更新
 
 - `+field-create`：按目标字段配置直接构造 `--json`。
@@ -517,7 +524,7 @@
 
 ## 5. 暂不支持字段
 
-Object（对象字段）、Button（按钮字段）、Stage（流程字段）暂时都没有被 CLI 支持。这些字段会展示为 `not_support` 字段并被保护：不允许修改，不允许读取内容。
+Object（对象字段）、Stage（流程字段）暂时没有被 CLI 支持。这些字段会展示为 `not_support` 字段并被保护：不允许修改，不允许读取内容。
 
 遇到暂不支持的字段类型时，直接说明 Base CLI 当前不支持并停止；不要猜测未注册的字段 JSON、service 或 schema，也不要用其他字段类型冒充目标能力。
 

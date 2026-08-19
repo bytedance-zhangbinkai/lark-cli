@@ -107,3 +107,34 @@ func TestFieldCreateBatchContractStaysConsistentAcrossSkillAndReferences(t *test
 		}
 	}
 }
+
+func TestFieldJSONButtonContractUsesButtonConfig(t *testing.T) {
+	content, err := vfs.ReadFile("../../skills/lark-base/references/lark-base-field-json.md")
+	if err != nil {
+		t.Fatalf("read lark-base field JSON reference: %v", err)
+	}
+	fieldJSON := strings.Join(strings.Fields(string(content)), " ")
+
+	for _, want := range []string{
+		"| `button` | `type` `name` `button_config.title` | 无 |",
+		`{ "type": "button", "name": "按钮", "button_config": { "title": "点击按钮" } }`,
+	} {
+		if !strings.Contains(fieldJSON, want) {
+			t.Fatalf("field JSON SSOT missing button contract %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"+button-rule-bind",
+		"+button-rule-get",
+		"+button-rule-unbind",
+		"workflow_id",
+		"property.trigger",
+	} {
+		if strings.Contains(fieldJSON, forbidden) {
+			t.Fatalf("field JSON SSOT should not document button-rule lifecycle, found %q", forbidden)
+		}
+	}
+	if strings.Contains(fieldJSON, `{ "type": "button", "name": "按钮", "title": "点击按钮" }`) {
+		t.Fatal("button field JSON must use button_config.title instead of root title")
+	}
+}

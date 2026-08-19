@@ -1,9 +1,9 @@
 # Base CLI E2E Coverage
 
 ## Metrics
-- Denominator: 89 leaf commands
-- Covered: 30
-- Coverage: 33.7%
+- Denominator: 92 leaf commands
+- Covered: 34
+- Coverage: 37.0%
 
 ## Summary
 - TestBase_BasicWorkflow: proves `+base-create`, `+base-get`, `+table-create`, `+table-get`, and `+table-list`; key `t.Run(...)` proof points are `get base as bot`, `get table as bot`, and `list tables and find created table as bot`.
@@ -19,8 +19,9 @@
 - TestBaseFormQuestionsCreateVisibleRuleDryRun / TestBaseFormQuestionsUpdateVisibleRuleDryRun: prove `+form-questions-create` / `+form-questions-update` dry-run request shape and that the optional `visible_rule` display condition is transcribed verbatim into the request body.
 - TestBaseTableCopyDryRun: proves `+table-copy` and `+table-copy-status` request shapes, including the schema-safe default, table-name path escaping, explicit all+wait orchestration, Cobra duration parsing, and the opaque task ID body.
 - TestBaseTableCopyWorkflow: feature-gated by `LARK_CLI_E2E_BASE_TABLE_COPY_READY=1` until the OpenAPI is deployed; creates a source table and record, proves schema-only copy, all no-wait plus status, all wait, record inclusion, and cleanup.
+- TestBaseButtonRuleWorkflow: creates a temporary Base, table, button field, and disabled ButtonTrigger workflow; proves bind persistence with target readback, unbind persistence, repeated-unbind idempotency, and cleanup through the temporary Base lifecycle.
 - Cleanup note: `+table-delete` and `+role-delete` only run in cleanup and are intentionally left uncovered.
-- Blocked area: table-copy live integration remains deployment-gated; dashboard, field, most record operations, most form operations, view, and workflow operations still lack deterministic create/read/update workflows in this suite.
+- Blocked area: table-copy live integration remains deployment-gated; dashboard, most field, record, form, view, and workflow operations still lack deterministic create/read/update workflows in this suite.
 
 ## Command Table
 
@@ -36,6 +37,9 @@
 | ✓ | base +base-block-list | shortcut | base_block_dryrun_test.go::TestBaseBlockDryRun/list all,list folder | `--base-token`; optional `--parent-id`; optional `--type`; dry-run only | request shape only |
 | ✓ | base +base-block-move | shortcut | base_block_dryrun_test.go::TestBaseBlockDryRun/move root,move after | `--base-token`; `--block-id`; optional `--parent-id`; `--after-id`; dry-run only | request shape only |
 | ✓ | base +base-block-rename | shortcut | base_block_dryrun_test.go::TestBaseBlockDryRun/rename | `--base-token`; `--block-id`; `--name`; dry-run only | request shape only |
+| ✓ | base +button-rule-bind | shortcut | base_button_rule_dryrun_test.go::TestBaseButtonRuleDryRun; base_button_rule_workflow_test.go::TestBaseButtonRuleWorkflow/bind by name and read back target by ID | `--field-id` ID/name; public `--workflow-id` with `wkf` prefix; dry-run + live | live readback asserts canonical name resolution and the exact workflow target |
+| ✓ | base +button-rule-get | shortcut | base_button_rule_dryrun_test.go::TestBaseButtonRuleDryRun; base_button_rule_workflow_test.go::TestBaseButtonRuleWorkflow | bound and unbound response shapes; dry-run + live | asserts `bound`, `target.type`, and `target.id` |
+| ✓ | base +button-rule-unbind | shortcut | base_button_rule_dryrun_test.go::TestBaseButtonRuleDryRun; base_button_rule_workflow_test.go::TestBaseButtonRuleWorkflow/unbind,repeat unbind is idempotent | `--field-id` ID/name; dry-run + live | repeated unbind reads back `bound=false` and `target=null` |
 | ✕ | base +dashboard-arrange | shortcut |  | none | dashboard workflows not covered |
 | ✕ | base +dashboard-block-create | shortcut |  | none | dashboard workflows not covered |
 | ✕ | base +dashboard-block-delete | shortcut |  | none | dashboard workflows not covered |
@@ -49,7 +53,7 @@
 | ✕ | base +dashboard-list | shortcut |  | none | dashboard workflows not covered |
 | ✕ | base +dashboard-update | shortcut |  | none | dashboard workflows not covered |
 | ✕ | base +data-query | shortcut |  | none | no data-query assertions yet |
-| ✓ | base +field-create | shortcut | base_field_dryrun_test.go::TestBaseFieldCreateDryRunArrayCompat | `--base-token`; `--table-id`; `--json`; dry-run only | request shape only |
+| ✓ | base +field-create | shortcut | base_field_dryrun_test.go::TestBaseFieldCreateDryRunArrayCompat; base_button_rule_workflow_test.go::TestBaseButtonRuleWorkflow/create button field | `--base-token`; `--table-id`; `--json`; dry-run + live | live workflow asserts the created button field identity |
 | ✕ | base +field-delete | shortcut |  | none | field workflows not covered |
 | ✕ | base +field-get | shortcut |  | none | field workflows not covered |
 | ✕ | base +field-list | shortcut |  | none | field workflows not covered |
@@ -109,7 +113,7 @@
 | ✕ | base +view-set-sort | shortcut |  | none | view workflows not covered |
 | ✕ | base +view-set-timebar | shortcut |  | none | view workflows not covered |
 | ✕ | base +view-set-visible-fields | shortcut |  | none | view workflows not covered |
-| ✕ | base +workflow-create | shortcut |  | none | workflow CRUD not covered |
+| ✓ | base +workflow-create | shortcut | base_button_rule_workflow_test.go::TestBaseButtonRuleWorkflow/create disabled workflow | ButtonTrigger → Delay; unique `client_token` | live workflow asserts the public `wkf` ID; temporary Base cleanup removes the disabled workflow |
 | ✕ | base +workflow-disable | shortcut |  | none | workflow CRUD not covered |
 | ✕ | base +workflow-enable | shortcut |  | none | workflow CRUD not covered |
 | ✕ | base +workflow-get | shortcut |  | none | workflow CRUD not covered |
