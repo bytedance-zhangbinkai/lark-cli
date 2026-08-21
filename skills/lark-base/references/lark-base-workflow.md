@@ -499,42 +499,34 @@
           { "kind": "case", "to": "step_bug_action", "label": "branch_1", "desc": "Bug" },
           { "kind": "case", "to": "step_feature_action", "label": "branch_2", "desc": "功能建议" },
           { "kind": "case", "to": "step_experience_action", "label": "branch_3", "desc": "体验问题" },
-          { "kind": "case", "to": "step_other_action", "label": "other", "desc": "其他" }
+          { "kind": "case", "to": "step_other_action", "label": "default", "desc": "默认分支" }
         ]
       },
       "next": null,
       "data": {
         "mode": "Exclusive",
-        "prompt": [
+        "classes": [
+          {
+            "name": "Bug",
+            "desc": "功能报错、异常、崩溃、无法使用或结果错误"
+          },
+          {
+            "name": "功能建议",
+            "desc": "希望新增能力或改变产品行为"
+          },
+          {
+            "name": "体验问题",
+            "desc": "流程繁琐、操作难懂、性能慢或界面体验不佳"
+          }
+        ],
+        "content": [
           { "value_type": "text", "value": "请根据反馈标题和反馈详情判断类型：" },
           { "value_type": "ref", "value": "$.step_trigger.fldFeedbackTitle" },
           { "value_type": "text", "value": " " },
           { "value_type": "ref", "value": "$.step_trigger.fldFeedbackDetail" }
         ],
-        "childBranchList": [
-          {
-            "name": [{ "value_type": "text", "value": "Bug" }],
-            "description": [{ "value_type": "text", "value": "功能报错、异常、崩溃、无法使用或结果错误" }],
-            "entryChildStepId": "step_bug_action"
-          },
-          {
-            "name": [{ "value_type": "text", "value": "功能建议" }],
-            "description": [{ "value_type": "text", "value": "希望新增能力或改变产品行为" }],
-            "entryChildStepId": "step_feature_action"
-          },
-          {
-            "name": [{ "value_type": "text", "value": "体验问题" }],
-            "description": [{ "value_type": "text", "value": "流程繁琐、操作难懂、性能慢或界面体验不佳" }],
-            "entryChildStepId": "step_experience_action"
-          }
-        ],
-        "defaultBranchInfo": {
-          "mode": "Execute",
-          "entryStepId": "step_other_action"
-        },
-        "classifyPrompt": [
-          { "value_type": "text", "value": "有明确故障现象时优先归入 Bug；同时包含多个诉求时，以最影响用户完成任务的问题为准；信息不足时进入其他分类。" }
-        ]
+        "classification_rule": "有明确故障现象时优先归入 Bug；同时包含多个诉求时，以最影响用户完成任务的问题为准；信息不足时进入默认分支。",
+        "no_match_action": "classifyToOther"
       }
     },
     {
@@ -600,12 +592,12 @@
 1. 创建：`lark-cli base +workflow-create --base-token <base_token> --json @workflow.json`
 2. 回读：`lark-cli base +workflow-get --base-token <base_token> --workflow-id <workflow_id>`
 3. 更新：先保存回读结果，只修改目标字段，再执行 `+workflow-update --json @workflow.json`
-4. 再次回读：确认 `AIClassificationBranch` 的 `prompt`、分类列表、默认分支和 `children.links` 均未丢失
+4. 再次回读：确认 `AIClassificationBranch` 的 `mode`、`classes`、`content`、`classification_rule`、`no_match_action` 和 `children.links` 均未丢失
 
 关键点：
-- `AIClassificationBranch.children.links` 使用 `kind: "case"`；普通分类和其他分支都通过 `to` 指向后续 step。
-- `prompt` 通常使用 `text` / `ref` 混排；`classifyPrompt`、`mode`、`defaultBranchInfo` 和字段别名以服务端保存和 `+workflow-get` 回读为准。
-- `mode: "Parallel"` 表示所有匹配；是否支持并行模式、默认分支和具体枚举由服务端能力决定。
+- `AIClassificationBranch.data` 使用公开 Agent Data：`mode`、`classes`、`content`、`classification_rule`、`no_match_action`。
+- `AIClassificationBranch.children.links` 使用 `kind: "case"`；普通分类使用 `branch_1`、`branch_2` 等标签，默认分支使用 `label: "default"`。
+- `classes[i].name` 与对应普通分支 `children.links[i].desc` 保持一致；`no_match_action: "classifyToOther"` 时必须提供默认分支。
 - AI 分类可能处理业务敏感信息；创建或更新后用 `+workflow-get` 确认最终保存结果，不要只依赖提交前 JSON。
 
 ---

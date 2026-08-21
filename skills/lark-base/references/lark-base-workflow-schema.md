@@ -555,51 +555,48 @@
 
 ### AIClassificationBranch
 
-`AIClassificationBranch` 用 AI 对 `prompt` 内容做分类，再通过 `children.links` 中的 `case` 边进入命中的后续步骤。`+workflow-create` / `+workflow-update` 会把 workflow JSON 作为对象提交给 Base v3 API，不在 CLI 内复制服务端节点校验；提交后用 `+workflow-get` 回读确认服务端保存的最终字段、枚举和兼容格式。
+`AIClassificationBranch` 用 AI 对 `content` 内容做分类，再通过 `children.links` 中的 `case` 边进入命中的后续步骤。`steps[].data` 使用公开 Agent Data 协议，不提交内部 Draft Data 字段；提交后用 `+workflow-get` 回读确认服务端保存的最终字段和枚举。
 
 ```json
 {
   "mode": "Exclusive",
-  "prompt": [
+  "classes": [
+    {
+      "name": "Bug",
+      "desc": "功能报错、异常、不可用或结果错误"
+    },
+    {
+      "name": "功能建议",
+      "desc": "希望新增能力或优化现有功能"
+    }
+  ],
+  "content": [
     { "value_type": "text", "value": "请根据反馈内容判断类型：" },
     { "value_type": "ref", "value": "$.step_trigger.fldFeedback" }
   ],
-  "childBranchList": [
-    {
-      "name": [{ "value_type": "text", "value": "Bug" }],
-      "description": [{ "value_type": "text", "value": "功能报错、异常、不可用或结果错误" }],
-      "entryChildStepId": "step_bug_action"
-    },
-    {
-      "name": [{ "value_type": "text", "value": "功能建议" }],
-      "description": [{ "value_type": "text", "value": "希望新增能力或优化现有功能" }],
-      "entryChildStepId": "step_feature_action"
-    }
-  ],
-  "defaultBranchInfo": {
-    "mode": "Execute",
-    "entryStepId": "step_other_action"
-  },
-  "classifyPrompt": [
-    { "value_type": "text", "value": "信息不足时进入其他分类；有明确故障现象时优先归为 Bug。" }
-  ]
+  "classification_rule": "信息不足时判定为无法匹配。",
+  "no_match_action": "fail"
 }
 ```
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
-| `mode` | 否 | 执行逻辑，常见语义为 `Exclusive`（最为匹配，只执行一个分类分支）或 `Parallel`（所有匹配，执行全部命中分支）。可用枚举和默认值以服务端返回为准 |
-| `prompt` | 是 | TextRefItem[]，用于分类的内容，通常支持 `text` / `ref` 混排；引用路径是否有效由服务端工作流上下文裁决 |
-| `childBranchList` / `child_branch_list` | 是 | 分类列表。常见字段包含 `name`、`description`、`entryChildStepId`；分类数量、名称格式和兼容字段以服务端能力为准 |
-| `defaultBranchInfo` / `default_branch_info` | 否 | 无匹配策略。常见结构包含 `mode` 和 `entryStepId` / `entry_step_id`，例如进入其他分支或当前节点失败 |
-| `no_match_action` / `noMatchAction` | 否 | 服务端回读可能使用的无匹配策略字段；不要在 CLI 侧自行改写为另一套枚举 |
-| `classifyPrompt` / `classify_prompt` | 否 | 全局分类规则，通常为 TextRefItem[]；是否支持变量引用和长度限制以服务端契约为准 |
+| `mode` | 是 | 执行逻辑。`Exclusive`：最为匹配，只执行一个分类分支；`Parallel`：所有匹配，执行全部命中分支 |
+| `classes` | 是 | 分类列表，至少 2 项。每项包含 `name` 和 `desc` |
+| `classes[].name` | 是 | 分类名称，需与对应普通 `children.links[].desc` 保持一致 |
+| `classes[].desc` | 是 | 分类描述，可为空字符串，但字段必须存在 |
+| `content` | 是 | TextRefItem[]，用于分类的内容，支持 `text` / `ref` |
+| `classification_rule` | 否 | 全局分类规则纯文本 |
+| `no_match_action` | 是 | 无匹配策略。`classifyToOther`：进入默认分支；`fail`：当前节点失败 |
+
+不要在公开 JSON 中提交内部 Draft Data 字段：`prompt`、`childBranchList` / `child_branch_list`、`defaultBranchInfo` / `default_branch_info`、`classifyPrompt` / `classify_prompt`。
 
 `children.links` 规则：
-- 每条边使用 `kind: "case"`，`to` 指向该分类或默认分支的入口 step。
-- `label` 建议使用稳定中性值，如 `branch_1`、`branch_2`、`other`；分类语义写在 `desc` 和 `childBranchList[].name`。
-- `entryChildStepId` / `entryStepId` 与 `children.links[].to` 的落盘关系以 `+workflow-get` 回读为准；创建或更新后不要只依赖本地 JSON 判断成功。
-- AI 分类、并行模式、默认分支和具体枚举是否可用由服务端/租户能力裁决。CLI 只展示服务端返回的成功结果或错误，不提前拒绝服务端未来可能接受的字段、枚举或兼容格式。
+- 分类和默认分支的拓扑只由 `children.links` 表达。
+- 普通分类边使用 `kind: "case"` 和 `label: "branch_1"`、`branch_2` 等稳定标签；`desc` 与 `classes[i].name` 保持一致；`to` 指向该分类的入口 step。
+- `no_match_action: "classifyToOther"` 时必须额外提供一条默认分支边：`{ "kind": "case", "label": "default", "desc": "默认分支", "to": "step_other_action" }`。
+- `label: "other"` 不表示默认分支，不要使用。
+- 创建或更新后，用 `+workflow-get` 回读确认公开 Agent Data、`mode` 和分支拓扑均已保存。
 
 
 ## System data 详细结构

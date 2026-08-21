@@ -30,6 +30,8 @@ var BaseWorkflowUpdate = common.Shortcut{
 		"Step ids must be unique, and every next/children link must reference an existing step id.",
 		"Updating does not enable or disable a workflow; call +workflow-enable or +workflow-disable separately.",
 		"Use lark-base-workflow.md as the module entry and lark-base-workflow-schema.md as the steps JSON SSOT; do not invent steps[].type/data/next/children from natural language.",
+		"AIClassificationBranch update accepts the same public Agent Data shape returned by +workflow-get; keep mode/classes/content/classification_rule/no_match_action.",
+		"AIClassificationBranch default branch must use children.links label default; label other is treated as invalid in CLI input.",
 	},
 	Validate: func(ctx context.Context, runtime *common.RuntimeContext) error {
 		if strings.TrimSpace(runtime.Str("base-token")) == "" {
@@ -39,7 +41,11 @@ var BaseWorkflowUpdate = common.Shortcut{
 			return baseFlagErrorf("--workflow-id must not be blank")
 		}
 		pc := newParseCtx(runtime)
-		if _, err := parseJSONObject(pc, runtime.Str("json"), "json"); err != nil {
+		body, err := parseJSONObject(pc, runtime.Str("json"), "json")
+		if err != nil {
+			return err
+		}
+		if err := validateWorkflowAIClassificationBranches(body); err != nil {
 			return err
 		}
 		return nil
