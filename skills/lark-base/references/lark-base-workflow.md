@@ -604,9 +604,9 @@
 
 关键点：
 - `AIClassificationBranch.children.links` 使用 `kind: "case"`；普通分类和其他分支都通过 `to` 指向后续 step。
-- `prompt` 支持 `text` / `ref` 混排，`classifyPrompt` 只写纯文本规则。
-- `mode: "Parallel"` 表示所有匹配；是否支持并行模式和默认分支由服务端能力决定，CLI 不会静默降级。
-- AI 分类可能处理业务敏感信息，默认错误提示只定位字段路径，不应输出完整待分类内容。
+- `prompt` 通常使用 `text` / `ref` 混排；`classifyPrompt`、`mode`、`defaultBranchInfo` 和字段别名以服务端保存和 `+workflow-get` 回读为准。
+- `mode: "Parallel"` 表示所有匹配；是否支持并行模式、默认分支和具体枚举由服务端能力决定。
+- AI 分类可能处理业务敏感信息；创建或更新后用 `+workflow-get` 确认最终保存结果，不要只依赖提交前 JSON。
 
 ---
 
