@@ -879,6 +879,7 @@ func TestBaseWorkflowHelpGuidesAgents(t *testing.T) {
 				"lark-base-workflow.md as the module entry",
 				"lark-base-workflow-schema.md as the steps JSON SSOT",
 				"do not invent steps[].type/data/next/children from natural language",
+				"AIClassificationBranch",
 			},
 		},
 		{
@@ -892,6 +893,7 @@ func TestBaseWorkflowHelpGuidesAgents(t *testing.T) {
 				"workflow-id must start with wkf",
 				"Updating does not enable or disable",
 				"do not invent steps[].type/data/next/children from natural language",
+				"AIClassificationBranch",
 			},
 		},
 		{

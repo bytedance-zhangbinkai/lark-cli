@@ -134,6 +134,7 @@
 |------|------|
 | `IfElseBranch` | 条件分支，`children.links` 含 `if_true` 和 `if_false` |
 | `SwitchBranch` | 多路分支，`children.links` 含多个 `case` |
+| `AIClassificationBranch` | AI 分类分支，`children.links` 含多个 `case` |
 
 ### System 类型
 
@@ -551,6 +552,54 @@
 |------|------|------|
 | `name` | string | 分支名称 |
 | `condition` | OrGroup | 分支条件 |
+
+### AIClassificationBranch
+
+`AIClassificationBranch` 用 AI 对 `prompt` 内容做分类，再通过 `children.links` 中的 `case` 边进入命中的后续步骤。`+workflow-create` / `+workflow-update` 只提交完整 workflow JSON；提交后用 `+workflow-get` 回读确认服务端保存的最终字段和枚举。
+
+```json
+{
+  "mode": "Exclusive",
+  "prompt": [
+    { "value_type": "text", "value": "请根据反馈内容判断类型：" },
+    { "value_type": "ref", "value": "$.step_trigger.fldFeedback" }
+  ],
+  "childBranchList": [
+    {
+      "name": [{ "value_type": "text", "value": "Bug" }],
+      "description": [{ "value_type": "text", "value": "功能报错、异常、不可用或结果错误" }],
+      "entryChildStepId": "step_bug_action"
+    },
+    {
+      "name": [{ "value_type": "text", "value": "功能建议" }],
+      "description": [{ "value_type": "text", "value": "希望新增能力或优化现有功能" }],
+      "entryChildStepId": "step_feature_action"
+    }
+  ],
+  "defaultBranchInfo": {
+    "mode": "Execute",
+    "entryStepId": "step_other_action"
+  },
+  "classifyPrompt": [
+    { "value_type": "text", "value": "信息不足时进入其他分类；有明确故障现象时优先归为 Bug。" }
+  ]
+}
+```
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `mode` | 否 | 执行逻辑。`Exclusive`：最为匹配，只执行一个分类分支；`Parallel`：所有匹配，执行全部命中分支。省略时以服务端默认值为准 |
+| `prompt` | 是 | TextRefItem[]，用于分类的内容，支持 `text` / `ref` 混排；`ref` 只能引用前序 step |
+| `childBranchList` / `child_branch_list` | 是 | 分类列表，至少 2 个。分类名可用 string 或纯文本 TextRefItem[]，同一节点内不可为空、重复、包含换行或使用保留名称 `其他` |
+| `defaultBranchInfo` / `default_branch_info` | 否 | 无匹配策略。`mode: "Execute"` 时可通过 `entryStepId` / `entry_step_id` 指向其他分支入口；`mode: "Fail"` 时当前节点失败 |
+| `no_match_action` / `noMatchAction` | 否 | 服务端回读可能使用的无匹配策略字段，常见值为 `classifyToOther` / `fail` |
+| `classifyPrompt` / `classify_prompt` | 否 | 全局分类规则，TextRefItem[]，只能使用 `text` 段，不支持变量引用 |
+
+`children.links` 规则：
+- 每条边使用 `kind: "case"`，`to` 指向该分类或默认分支的入口 step。
+- `label` 建议使用稳定中性值，如 `branch_1`、`branch_2`、`other`；分类语义写在 `desc` 和 `childBranchList[].name`。
+- `entryChildStepId` / `entryStepId` 与 `children.links[].to` 都必须引用同一 workflow 内存在的 step。多个分类不要指向同一个入口 step，避免图结构冲突。
+- 并行模式和 AI 分类能力是否可用由服务端/租户能力裁决；CLI 不会把 `Parallel` 静默降级为 `Exclusive`。
 
 
 ## System data 详细结构

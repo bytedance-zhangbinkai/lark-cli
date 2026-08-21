@@ -28,6 +28,7 @@ var BaseWorkflowCreate = common.Shortcut{
 		"Before constructing steps, use +table-list and +field-list to confirm real table and field names.",
 		"Step ids must be unique, and every next/children link must reference an existing step id.",
 		"Use lark-base-workflow.md as the module entry and lark-base-workflow-schema.md as the steps JSON SSOT; do not invent steps[].type/data/next/children from natural language.",
+		"For AIClassificationBranch, read the schema section first and run +workflow-get after create to confirm the saved prompt, branches, default branch, and children.links.",
 	},
 	Validate: func(ctx context.Context, runtime *common.RuntimeContext) error {
 		if strings.TrimSpace(runtime.Str("base-token")) == "" {
@@ -38,7 +39,11 @@ var BaseWorkflowCreate = common.Shortcut{
 		if err != nil {
 			return err
 		}
-		if _, err := parseJSONObject(pc, raw, "json"); err != nil {
+		body, err := parseJSONObject(pc, raw, "json")
+		if err != nil {
+			return err
+		}
+		if err := validateWorkflowAIClassificationBranches(body); err != nil {
 			return err
 		}
 		return nil
