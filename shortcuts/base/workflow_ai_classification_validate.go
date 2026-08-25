@@ -52,12 +52,14 @@ func validateWorkflowAIClassificationStep(index int, step map[string]interface{}
 }
 
 func validateAIClassificationAgentData(path string, data map[string]interface{}, stepIndex int, stepIDs map[string]int) ([]string, error) {
-	mode, ok := data["mode"].(string)
-	if !ok || strings.TrimSpace(mode) == "" {
-		return nil, baseValidationErrorf("%s.data.mode is required and must be Exclusive or Parallel", path)
-	}
-	if mode != "Exclusive" && mode != "Parallel" {
-		return nil, baseValidationErrorf("%s.data.mode must be Exclusive or Parallel", path)
+	if modeRaw, ok := data["mode"]; ok {
+		mode, ok := modeRaw.(string)
+		if !ok || strings.TrimSpace(mode) == "" {
+			return nil, baseValidationErrorf("%s.data.mode must be Exclusive or Parallel when set", path)
+		}
+		if mode != "Exclusive" && mode != "Parallel" {
+			return nil, baseValidationErrorf("%s.data.mode must be Exclusive or Parallel when set", path)
+		}
 	}
 
 	rawClasses, ok := data["classes"].([]interface{})
@@ -101,12 +103,14 @@ func validateAIClassificationAgentData(path string, data map[string]interface{},
 			return nil, baseValidationErrorf("%s.data.classification_rule must be a string when set", path)
 		}
 	}
-	action, ok := data["no_match_action"].(string)
-	if !ok || strings.TrimSpace(action) == "" {
-		return nil, baseValidationErrorf("%s.data.no_match_action is required and must be classifyToOther or fail", path)
-	}
-	if action != "classifyToOther" && action != "fail" {
-		return nil, baseValidationErrorf("%s.data.no_match_action must be classifyToOther or fail", path)
+	if actionRaw, ok := data["no_match_action"]; ok {
+		action, ok := actionRaw.(string)
+		if !ok || strings.TrimSpace(action) == "" {
+			return nil, baseValidationErrorf("%s.data.no_match_action must be classifyToOther or fail when set", path)
+		}
+		if action != "classifyToOther" && action != "fail" {
+			return nil, baseValidationErrorf("%s.data.no_match_action must be classifyToOther or fail when set", path)
+		}
 	}
 	return classes, nil
 }
@@ -218,7 +222,7 @@ func validateAIClassificationLinks(path string, step map[string]interface{}, ste
 
 func aiClassificationNoMatchAction(data map[string]interface{}) string {
 	action, _ := data["no_match_action"].(string)
-	return action
+	return strings.TrimSpace(action)
 }
 
 func workflowRefStepID(value string) (string, bool) {

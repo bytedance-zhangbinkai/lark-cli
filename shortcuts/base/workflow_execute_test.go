@@ -132,7 +132,6 @@ func TestBaseWorkflowExecuteCreatePreservesAIClassificationAgentData(t *testing.
 					{"kind": "case", "label": "default", "desc": "默认分支", "to": "step_other"}
 				]},
 				"data": {
-					"mode": "Parallel",
 					"classes": [
 						{"name": "Bug", "desc": "Broken behavior"},
 						{"name": "Feature", "desc": "New capability"}
@@ -191,7 +190,6 @@ func TestBaseWorkflowExecuteValidateAIClassificationAgentData(t *testing.T) {
 	}
 	validChildren := `{"links":[{"kind":"case","label":"branch_1","desc":"Bug","to":"step_bug"},{"kind":"case","label":"branch_2","desc":"Feature","to":"step_feature"}]}`
 	validData := `{
-		"mode": "Exclusive",
 		"classes": [
 			{"name": "Bug", "desc": "Broken behavior"},
 			{"name": "Feature", "desc": "New capability"}
@@ -212,9 +210,9 @@ func TestBaseWorkflowExecuteValidateAIClassificationAgentData(t *testing.T) {
 			want: "data.classes must be an array",
 		},
 		{
-			name: "missing mode",
-			body: base(strings.Replace(validData, `"mode": "Exclusive",`, ``, 1), validChildren),
-			want: "data.mode is required",
+			name: "invalid mode",
+			body: base(strings.Replace(validData, `"classes": [`, `"mode": "invalid", "classes": [`, 1), validChildren),
+			want: "data.mode must be Exclusive or Parallel when set",
 		},
 		{
 			name: "empty links",
@@ -253,6 +251,48 @@ func TestBaseWorkflowExecuteValidateAIClassificationAgentData(t *testing.T) {
 	}
 }
 
+func TestBaseWorkflowExecuteValidateAIClassificationOptionalModeAndNoMatchAction(t *testing.T) {
+	base := func(data string, children string) string {
+		return `{
+			"title": "Feedback classify",
+			"steps": [
+				{"id": "step_trigger", "type": "AddRecordTrigger", "next": "step_classify", "data": {}},
+				{"id": "step_classify", "type": "AIClassificationBranch", "children": ` + children + `, "data": ` + data + `},
+				{"id": "step_bug", "type": "SetRecordAction", "next": null, "data": {}},
+				{"id": "step_feature", "type": "SetRecordAction", "next": null, "data": {}},
+				{"id": "step_other", "type": "LarkMessageAction", "next": null, "data": {}}
+			]
+		}`
+	}
+	data := `{
+		"classes": [
+			{"name": "Bug", "desc": "Broken behavior"},
+			{"name": "Feature", "desc": "New capability"}
+		],
+		"content": [{"value_type": "text", "value": "Classify"}],
+		"classification_rule": "Use the closest category."
+	}`
+	children := `{"links":[{"kind":"case","label":"branch_1","desc":"Bug","to":"step_bug"},{"kind":"case","label":"branch_2","desc":"Feature","to":"step_feature"},{"kind":"case","label":"default","desc":"默认分支","to":"step_other"}]}`
+
+	factory, stdout, reg := newExecuteFactory(t)
+	stub := &httpmock.Stub{
+		Method: "POST",
+		URL:    "/open-apis/base/v3/bases/app_x/workflows",
+		Body: map[string]interface{}{
+			"code": 0,
+			"data": map[string]interface{}{"workflow_id": "wkf_ai", "title": "Feedback classify"},
+		},
+	}
+	reg.Register(stub)
+	if err := runShortcut(t, BaseWorkflowCreate, []string{"+workflow-create", "--base-token", "app_x", "--json", base(data, children)}, factory, stdout); err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	got := string(stub.CapturedBody)
+	if strings.Contains(got, `"mode"`) || strings.Contains(got, `"no_match_action"`) {
+		t.Fatalf("AI classification optional fields should not be injected by CLI: %s", got)
+	}
+}
+
 func TestBaseWorkflowExecuteUpdateAcceptsAIClassificationGetShape(t *testing.T) {
 	factory, stdout, reg := newExecuteFactory(t)
 	stub := &httpmock.Stub{
@@ -284,8 +324,7 @@ func TestBaseWorkflowExecuteUpdateAcceptsAIClassificationGetShape(t *testing.T) 
 						{"name": "Feature", "desc": "New capability"}
 					],
 					"content": [{"value_type": "text", "value": "Classify"}],
-					"classification_rule": "Use the closest category.",
-					"no_match_action": "fail"
+					"classification_rule": "Use the closest category."
 				}
 			},
 			{"id": "step_bug", "type": "SetRecordAction", "next": null, "data": {}},
@@ -295,7 +334,7 @@ func TestBaseWorkflowExecuteUpdateAcceptsAIClassificationGetShape(t *testing.T) 
 	if err := runShortcut(t, BaseWorkflowUpdate, []string{"+workflow-update", "--base-token", "app_x", "--workflow-id", "wkf_1", "--json", body}, factory, stdout); err != nil {
 		t.Fatalf("err=%v", err)
 	}
-	if got := string(stub.CapturedBody); !strings.Contains(got, `"mode":"Parallel"`) || !strings.Contains(got, `"classes":[`) {
+	if got := string(stub.CapturedBody); !strings.Contains(got, `"mode":"Parallel"`) || strings.Contains(got, `"no_match_action"`) || !strings.Contains(got, `"classes":[`) {
 		t.Fatalf("AI classification get shape was not forwarded: %s", got)
 	}
 }

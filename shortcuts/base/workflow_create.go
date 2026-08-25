@@ -28,7 +28,7 @@ var BaseWorkflowCreate = common.Shortcut{
 		"Before constructing steps, use +table-list and +field-list to confirm real table and field names.",
 		"Step ids must be unique, and every next/children link must reference an existing step id.",
 		"Use lark-base-workflow.md as the module entry and lark-base-workflow-schema.md as the steps JSON SSOT; do not invent steps[].type/data/next/children from natural language.",
-		"AIClassificationBranch data uses the public Agent Data shape: mode/classes/content/classification_rule/no_match_action.",
+		"AIClassificationBranch data uses the public Agent Data shape: classes/content/classification_rule/no_match_action; omit mode and let the service default it.",
 		"AIClassificationBranch cannot be saved as an empty shell; create downstream actions first and connect branch_1/branch_2/default through children.links.",
 	},
 	Validate: func(ctx context.Context, runtime *common.RuntimeContext) error {

@@ -559,7 +559,6 @@
 
 ```json
 {
-  "mode": "Exclusive",
   "classes": [
     {
       "name": "Bug",
@@ -574,29 +573,28 @@
     { "value_type": "text", "value": "请根据反馈内容判断类型：" },
     { "value_type": "ref", "value": "$.step_trigger.fldFeedback" }
   ],
-  "classification_rule": "信息不足时判定为无法匹配。",
-  "no_match_action": "fail"
+  "classification_rule": "信息不足时判定为无法匹配。"
 }
 ```
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
-| `mode` | 是 | 执行逻辑。`Exclusive`：最为匹配，只执行一个分类分支；`Parallel`：所有匹配，执行全部命中分支 |
+| `mode` | 否 | 服务端回读字段；创建时可省略，默认由服务端/SDK 设置。CLI 不在本地拒绝 `Parallel` 或缺失值 |
 | `classes` | 是 | 分类列表，至少 2 项。每项包含 `name` 和 `desc` |
 | `classes[].name` | 是 | 分类名称，需与对应普通 `children.links[].desc` 保持一致 |
 | `classes[].desc` | 是 | 分类描述，可为空字符串，但字段必须存在 |
 | `content` | 是 | TextRefItem[]，用于分类的内容，支持 `text` / `ref` |
 | `classification_rule` | 否 | 全局分类规则纯文本 |
-| `no_match_action` | 是 | 无匹配策略。`classifyToOther`：进入默认分支；`fail`：当前节点失败 |
+| `no_match_action` | 否 | 无匹配策略。`classifyToOther`：进入默认分支；`fail`：当前节点失败。创建缺省时使用服务端/SDK 默认 `classifyToOther`，更新缺省时保留既有配置 |
 
 不要在公开 JSON 中提交内部 Draft Data 字段：`prompt`、`childBranchList` / `child_branch_list`、`defaultBranchInfo` / `default_branch_info`、`classifyPrompt` / `classify_prompt`。
 
 `children.links` 规则：
 - 分类和默认分支的拓扑只由 `children.links` 表达。
 - 普通分类边使用 `kind: "case"` 和 `label: "branch_1"`、`branch_2` 等稳定标签；`desc` 与 `classes[i].name` 保持一致；`to` 指向该分类的入口 step。
-- `no_match_action: "classifyToOther"` 时必须额外提供一条默认分支边：`{ "kind": "case", "label": "default", "desc": "默认分支", "to": "step_other_action" }`。
+- 缺省或 `no_match_action: "classifyToOther"` 时必须额外提供一条默认分支边：`{ "kind": "case", "label": "default", "desc": "默认分支", "to": "step_other_action" }`。
 - `label: "other"` 不表示默认分支，不要使用。
-- 创建或更新后，用 `+workflow-get` 回读确认公开 Agent Data、`mode` 和分支拓扑均已保存。
+- 创建或更新后，用 `+workflow-get` 回读确认公开 Agent Data、服务端返回的 `mode` 和分支拓扑均已保存；更新时保留回读中的未修改字段。
 
 
 ## System data 详细结构
