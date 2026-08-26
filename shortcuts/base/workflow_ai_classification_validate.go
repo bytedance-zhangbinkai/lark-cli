@@ -8,7 +8,10 @@ import (
 	"strings"
 )
 
-const workflowAIClassificationStepType = "AIClassificationBranch"
+const (
+	workflowAIClassificationStepType             = "AIClassificationBranch"
+	workflowAIClassificationDefaultNoMatchAction = "classifyToOther"
+)
 
 func validateWorkflowAIClassificationBranches(body map[string]interface{}) error {
 	steps, ok := body["steps"].([]interface{})
@@ -222,7 +225,11 @@ func validateAIClassificationLinks(path string, step map[string]interface{}, ste
 
 func aiClassificationNoMatchAction(data map[string]interface{}) string {
 	action, _ := data["no_match_action"].(string)
-	return strings.TrimSpace(action)
+	action = strings.TrimSpace(action)
+	if action == "" {
+		return workflowAIClassificationDefaultNoMatchAction
+	}
+	return action
 }
 
 func workflowRefStepID(value string) (string, bool) {

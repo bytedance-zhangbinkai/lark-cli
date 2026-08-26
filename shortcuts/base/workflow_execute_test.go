@@ -225,6 +225,12 @@ func TestBaseWorkflowExecuteValidateAIClassificationAgentData(t *testing.T) {
 			want: "label must be default",
 		},
 		{
+			name: "missing no match action still requires default link",
+			body: base(strings.Replace(validData, `,
+		"no_match_action": "fail"`, "", 1), validChildren),
+			want: "children.links must contain exactly one default link when no_match_action is classifyToOther",
+		},
+		{
 			name: "class link count mismatch",
 			body: base(validData, `{"links":[{"kind":"case","label":"branch_1","desc":"Bug","to":"step_bug"}]}`),
 			want: "children.links must contain one non-empty case link for each class",
@@ -315,7 +321,8 @@ func TestBaseWorkflowExecuteUpdateAcceptsAIClassificationGetShape(t *testing.T) 
 				"type": "AIClassificationBranch",
 				"children": {"links":[
 					{"kind":"case","label":"branch_1","desc":"Bug","to":"step_bug"},
-					{"kind":"case","label":"branch_2","desc":"Feature","to":"step_feature"}
+					{"kind":"case","label":"branch_2","desc":"Feature","to":"step_feature"},
+					{"kind":"case","label":"default","desc":"默认分支","to":"step_other"}
 				]},
 				"data": {
 					"mode": "Parallel",
@@ -328,7 +335,8 @@ func TestBaseWorkflowExecuteUpdateAcceptsAIClassificationGetShape(t *testing.T) 
 				}
 			},
 			{"id": "step_bug", "type": "SetRecordAction", "next": null, "data": {}},
-			{"id": "step_feature", "type": "SetRecordAction", "next": null, "data": {}}
+			{"id": "step_feature", "type": "SetRecordAction", "next": null, "data": {}},
+			{"id": "step_other", "type": "LarkMessageAction", "next": null, "data": {}}
 		]
 	}`
 	if err := runShortcut(t, BaseWorkflowUpdate, []string{"+workflow-update", "--base-token", "app_x", "--workflow-id", "wkf_1", "--json", body}, factory, stdout); err != nil {
