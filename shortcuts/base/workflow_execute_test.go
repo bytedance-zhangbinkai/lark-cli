@@ -191,6 +191,30 @@ func TestBaseWorkflowExecuteUpdateValidateAIAnalysisData(t *testing.T) {
 	})
 }
 
+func TestBaseWorkflowExecuteUpdateOmittedStepsClearsWorkflow(t *testing.T) {
+	factory, stdout, reg := newExecuteFactory(t)
+	stub := &httpmock.Stub{
+		Method: "PUT",
+		URL:    "/open-apis/base/v3/bases/app_x/workflows/wkf_1",
+		Body: map[string]interface{}{
+			"code": 0,
+			"data": map[string]interface{}{"workflow_id": "wkf_1", "title": "Only Title", "steps": []interface{}{}},
+		},
+	}
+	reg.Register(stub)
+	if err := runShortcut(t, BaseWorkflowUpdate, []string{"+workflow-update", "--base-token", "app_x", "--workflow-id", "wkf_1", "--json", `{"title":"Only Title"}`}, factory, stdout); err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(stub.CapturedBody, &body); err != nil {
+		t.Fatalf("request body invalid JSON: %v", err)
+	}
+	steps, ok := body["steps"].([]interface{})
+	if !ok || len(steps) != 0 {
+		t.Fatalf("request steps=%#v, want []", body["steps"])
+	}
+}
+
 func TestBaseWorkflowExecuteDisable(t *testing.T) {
 	factory, stdout, reg := newExecuteFactory(t)
 	reg.Register(&httpmock.Stub{
