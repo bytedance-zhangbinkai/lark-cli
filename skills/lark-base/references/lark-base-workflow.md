@@ -590,10 +590,10 @@
 1. 创建：`lark-cli base +workflow-create --base-token <base_token> --json @workflow.json`
 2. 回读：`lark-cli base +workflow-get --base-token <base_token> --workflow-id <workflow_id>`
 3. 更新：先保存回读结果，只修改目标字段，再执行 `+workflow-update --json @workflow.json`
-4. 再次回读：确认 `AIClassificationBranch` 的 `classes`、`content`、`classification_rule`、`children.links` 以及服务端返回的 `mode` / `no_match_action` 均未丢失
+4. 再次回读：确认 `AIClassificationBranch` 的 `classes`、`content`、`classification_rule`、`no_match_action` 和 `children.links` 均未丢失
 
 关键点：
-- `AIClassificationBranch.data` 使用公开 Agent Data：`classes`、`content`、`classification_rule`、`no_match_action`；创建时不需要提交 `mode`。
+- `AIClassificationBranch.data` 使用公开 Agent Data：`classes`、`content`、`classification_rule`、`no_match_action`；创建和更新都必须省略 `mode`，服务端按 AI 分类仅支持的 Exclusive 语义处理。
 - `AIClassificationBranch.children.links` 使用 `kind: "case"`；普通分类使用 `branch_1`、`branch_2` 等标签，默认分支使用 `label: "default"`。
 - `classes[i].name` 与对应普通分支 `children.links[i].desc` 保持一致；缺省或 `no_match_action: "classifyToOther"` 时必须提供默认分支。
 - AI 分类可能处理业务敏感信息；创建或更新后用 `+workflow-get` 确认最终保存结果，不要只依赖提交前 JSON。

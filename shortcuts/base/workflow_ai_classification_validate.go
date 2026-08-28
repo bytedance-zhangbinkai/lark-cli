@@ -55,14 +55,8 @@ func validateWorkflowAIClassificationStep(index int, step map[string]interface{}
 }
 
 func validateAIClassificationAgentData(path string, data map[string]interface{}, stepIndex int, stepIDs map[string]int) ([]string, error) {
-	if modeRaw, ok := data["mode"]; ok {
-		mode, ok := modeRaw.(string)
-		if !ok || strings.TrimSpace(mode) == "" {
-			return nil, baseValidationErrorf("%s.data.mode must be Exclusive or Parallel when set", path)
-		}
-		if mode != "Exclusive" && mode != "Parallel" {
-			return nil, baseValidationErrorf("%s.data.mode must be Exclusive or Parallel when set", path)
-		}
+	if _, ok := data["mode"]; ok {
+		return nil, baseValidationErrorf("%s.data.mode is not supported; omit it because AI classification only supports Exclusive mode", path)
 	}
 
 	rawClasses, ok := data["classes"].([]interface{})

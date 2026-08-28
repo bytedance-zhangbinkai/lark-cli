@@ -206,13 +206,28 @@ func TestBaseWorkflowExecuteValidateAIClassificationAgentData(t *testing.T) {
 	}{
 		{
 			name: "draft data is not public protocol",
-			body: base(`{"mode":"Exclusive","prompt":[{"value_type":"text","value":"Classify"}],"childBranchList":[{"name":"Bug"},{"name":"Feature"}],"no_match_action":"fail"}`, validChildren),
+			body: base(`{"prompt":[{"value_type":"text","value":"Classify"}],"childBranchList":[{"name":"Bug"},{"name":"Feature"}],"no_match_action":"fail"}`, validChildren),
 			want: "data.classes must be an array",
 		},
 		{
-			name: "invalid mode",
-			body: base(strings.Replace(validData, `"classes": [`, `"mode": "invalid", "classes": [`, 1), validChildren),
-			want: "data.mode must be Exclusive or Parallel when set",
+			name: "exclusive mode is not public input",
+			body: base(strings.Replace(validData, `"classes": [`, `"mode": "Exclusive", "classes": [`, 1), validChildren),
+			want: "data.mode is not supported; omit it because AI classification only supports Exclusive mode",
+		},
+		{
+			name: "parallel mode is not public input",
+			body: base(strings.Replace(validData, `"classes": [`, `"mode": "Parallel", "classes": [`, 1), validChildren),
+			want: "data.mode is not supported; omit it because AI classification only supports Exclusive mode",
+		},
+		{
+			name: "empty mode is not public input",
+			body: base(strings.Replace(validData, `"classes": [`, `"mode": "", "classes": [`, 1), validChildren),
+			want: "data.mode is not supported; omit it because AI classification only supports Exclusive mode",
+		},
+		{
+			name: "non string mode is not public input",
+			body: base(strings.Replace(validData, `"classes": [`, `"mode": true, "classes": [`, 1), validChildren),
+			want: "data.mode is not supported; omit it because AI classification only supports Exclusive mode",
 		},
 		{
 			name: "empty links",
@@ -299,7 +314,52 @@ func TestBaseWorkflowExecuteValidateAIClassificationOptionalModeAndNoMatchAction
 	}
 }
 
-func TestBaseWorkflowExecuteUpdateAcceptsAIClassificationGetShape(t *testing.T) {
+func TestBaseWorkflowExecuteUpdateRejectsAIClassificationMode(t *testing.T) {
+	base := func(mode string) string {
+		return `{
+			"title": "Feedback classify",
+			"steps": [
+				{"id": "step_trigger", "type": "AddRecordTrigger", "next": "step_classify", "data": {}},
+				{
+					"id": "step_classify",
+					"type": "AIClassificationBranch",
+					"children": {"links":[
+						{"kind":"case","label":"branch_1","desc":"Bug","to":"step_bug"},
+						{"kind":"case","label":"branch_2","desc":"Feature","to":"step_feature"}
+					]},
+					"data": {
+						"mode": "` + mode + `",
+						"classes": [
+							{"name": "Bug", "desc": "Broken behavior"},
+							{"name": "Feature", "desc": "New capability"}
+						],
+						"content": [{"value_type": "text", "value": "Classify"}],
+						"classification_rule": "Use the closest category.",
+						"no_match_action": "fail"
+					}
+				},
+				{"id": "step_bug", "type": "SetRecordAction", "next": null, "data": {}},
+				{"id": "step_feature", "type": "SetRecordAction", "next": null, "data": {}}
+			]
+		}`
+	}
+
+	for _, mode := range []string{"Exclusive", "Parallel"} {
+		t.Run(mode, func(t *testing.T) {
+			factory, stdout, _ := newExecuteFactory(t)
+			err := runShortcut(t, BaseWorkflowUpdate, []string{"+workflow-update", "--base-token", "app_x", "--workflow-id", "wkf_1", "--json", base(mode)}, factory, stdout)
+			if err == nil || !strings.Contains(err.Error(), "data.mode is not supported; omit it because AI classification only supports Exclusive mode") {
+				t.Fatalf("err=%v", err)
+			}
+			var validationErr *errs.ValidationError
+			if !errors.As(err, &validationErr) {
+				t.Fatalf("err type=%T want *errs.ValidationError", err)
+			}
+		})
+	}
+}
+
+func TestBaseWorkflowExecuteUpdatePreservesAIClassificationWithoutMode(t *testing.T) {
 	factory, stdout, reg := newExecuteFactory(t)
 	stub := &httpmock.Stub{
 		Method: "PUT",
@@ -325,7 +385,6 @@ func TestBaseWorkflowExecuteUpdateAcceptsAIClassificationGetShape(t *testing.T) 
 					{"kind":"case","label":"default","desc":"默认分支","to":"step_other"}
 				]},
 				"data": {
-					"mode": "Parallel",
 					"classes": [
 						{"name": "Bug", "desc": "Broken behavior"},
 						{"name": "Feature", "desc": "New capability"}
@@ -342,8 +401,8 @@ func TestBaseWorkflowExecuteUpdateAcceptsAIClassificationGetShape(t *testing.T) 
 	if err := runShortcut(t, BaseWorkflowUpdate, []string{"+workflow-update", "--base-token", "app_x", "--workflow-id", "wkf_1", "--json", body}, factory, stdout); err != nil {
 		t.Fatalf("err=%v", err)
 	}
-	if got := string(stub.CapturedBody); !strings.Contains(got, `"mode":"Parallel"`) || strings.Contains(got, `"no_match_action"`) || !strings.Contains(got, `"classes":[`) {
-		t.Fatalf("AI classification get shape was not forwarded: %s", got)
+	if got := string(stub.CapturedBody); strings.Contains(got, `"mode"`) || strings.Contains(got, `"no_match_action"`) || !strings.Contains(got, `"classes":[`) {
+		t.Fatalf("AI classification payload should be forwarded without injected optional fields: %s", got)
 	}
 }
 
