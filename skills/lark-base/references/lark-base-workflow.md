@@ -593,7 +593,7 @@
 4. 再次回读：确认 `AIClassificationBranch` 的 `classes`、`content`、`classification_rule`、`no_match_action` 和 `children.links` 均未丢失
 
 关键点：
-- `AIClassificationBranch.data` 使用公开 Agent Data：`classes`、`content`、`classification_rule`、`no_match_action`；创建和更新都必须省略 `mode`，服务端按 AI 分类仅支持的 Exclusive 语义处理。
+- `AIClassificationBranch.data` 使用公开 Agent Data：`classes`、`content`、`classification_rule`、`no_match_action`。
 - `AIClassificationBranch.children.links` 使用 `kind: "case"`；普通分类使用 `branch_1`、`branch_2` 等标签，默认分支使用 `label: "default"`。
 - `classes[i].name` 与对应普通分支 `children.links[i].desc` 保持一致；缺省或 `no_match_action: "classifyToOther"` 时必须提供默认分支。
 - AI 分类可能处理业务敏感信息；创建或更新后用 `+workflow-get` 确认最终保存结果，不要只依赖提交前 JSON。

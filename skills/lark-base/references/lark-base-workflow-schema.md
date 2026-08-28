@@ -555,7 +555,7 @@
 
 ### AIClassificationBranch
 
-`AIClassificationBranch` 用 AI 对 `content` 内容做分类，再通过 `children.links` 中的 `case` 边进入命中的后续步骤。`steps[].data` 使用公开 Agent Data 协议，不提交内部 Draft Data 字段；不要提交 `mode`，AI 分类仅支持服务端 Exclusive 语义。
+`AIClassificationBranch` 用 AI 对 `content` 内容做分类，再通过 `children.links` 中的 `case` 边进入命中的后续步骤。`steps[].data` 使用公开 Agent Data 协议，不提交内部 Draft Data 字段。
 
 ```json
 {
@@ -586,14 +586,14 @@
 | `classification_rule` | 否 | 全局分类规则纯文本 |
 | `no_match_action` | 否 | 无匹配策略。`classifyToOther`：进入默认分支；`fail`：当前节点失败。创建缺省时使用服务端/SDK 默认 `classifyToOther`，更新缺省时保留既有配置 |
 
-不要在公开 JSON 中提交 `mode` 或内部 Draft Data 字段：`prompt`、`childBranchList` / `child_branch_list`、`defaultBranchInfo` / `default_branch_info`、`classifyPrompt` / `classify_prompt`。`data.mode` 不支持作为 CLI 输入，即使值为 `Exclusive` 也必须省略；服务端按 AI 分类仅支持的 Exclusive 语义处理。
+不要在公开 JSON 中提交内部 Draft Data 字段：`prompt`、`childBranchList` / `child_branch_list`、`defaultBranchInfo` / `default_branch_info`、`classifyPrompt` / `classify_prompt`。
 
 `children.links` 规则：
 - 分类和默认分支的拓扑只由 `children.links` 表达。
 - 普通分类边使用 `kind: "case"` 和 `label: "branch_1"`、`branch_2` 等稳定标签；`desc` 与 `classes[i].name` 保持一致；`to` 指向该分类的入口 step。
 - 缺省或 `no_match_action: "classifyToOther"` 时必须额外提供一条默认分支边：`{ "kind": "case", "label": "default", "desc": "默认分支", "to": "step_other_action" }`。
 - `label: "other"` 不表示默认分支，不要使用。
-- 创建或更新后，用 `+workflow-get` 回读确认公开 Agent Data 和分支拓扑均已保存；更新时保留回读中的未修改字段，但不要向 `AIClassificationBranch.data` 写入 `mode`。
+- 创建或更新后，用 `+workflow-get` 回读确认公开 Agent Data 和分支拓扑均已保存；更新时保留回读中的未修改字段。
 
 
 ## System data 详细结构
