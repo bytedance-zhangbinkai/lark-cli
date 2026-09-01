@@ -13,12 +13,7 @@ const (
 	workflowAIClassificationDefaultNoMatchAction = "classifyToOther"
 )
 
-func validateWorkflowAIClassificationBranches(body map[string]interface{}) error {
-	steps, ok := body["steps"].([]interface{})
-	if !ok {
-		return nil
-	}
-
+func indexWorkflowStepIDs(steps []interface{}) map[string]int {
 	stepIDs := make(map[string]int, len(steps))
 	for i, raw := range steps {
 		step, _ := raw.(map[string]interface{})
@@ -27,18 +22,7 @@ func validateWorkflowAIClassificationBranches(body map[string]interface{}) error
 			stepIDs[id] = i
 		}
 	}
-
-	for i, raw := range steps {
-		step, _ := raw.(map[string]interface{})
-		stepType, _ := step["type"].(string)
-		if stepType != workflowAIClassificationStepType {
-			continue
-		}
-		if err := validateWorkflowAIClassificationStep(i, step, stepIDs); err != nil {
-			return err
-		}
-	}
-	return nil
+	return stepIDs
 }
 
 func validateWorkflowAIClassificationStep(index int, step map[string]interface{}, stepIDs map[string]int) error {
