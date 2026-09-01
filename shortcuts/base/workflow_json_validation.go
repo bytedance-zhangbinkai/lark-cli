@@ -28,17 +28,6 @@ func parseWorkflowBodyJSON(runtime *common.RuntimeContext) (map[string]interface
 	return body, nil
 }
 
-func parseWorkflowUpdateBodyJSON(runtime *common.RuntimeContext) (map[string]interface{}, error) {
-	body, err := parseWorkflowBodyJSON(runtime)
-	if err != nil {
-		return nil, err
-	}
-	if _, ok := body["steps"]; !ok {
-		body["steps"] = []interface{}{}
-	}
-	return body, nil
-}
-
 func validateWorkflowBodyForCLI(body map[string]interface{}) error {
 	if err := validateWorkflowAIClassificationBranches(body); err != nil {
 		return err

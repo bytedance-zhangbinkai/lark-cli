@@ -473,14 +473,14 @@ func TestBaseWorkflowExecuteUpdateValidateAIAnalysisData(t *testing.T) {
 	})
 }
 
-func TestBaseWorkflowExecuteUpdateOmittedStepsClearsWorkflow(t *testing.T) {
+func TestBaseWorkflowExecuteUpdatePreservesOmittedSteps(t *testing.T) {
 	factory, stdout, reg := newExecuteFactory(t)
 	stub := &httpmock.Stub{
 		Method: "PUT",
 		URL:    "/open-apis/base/v3/bases/app_x/workflows/wkf_1",
 		Body: map[string]interface{}{
 			"code": 0,
-			"data": map[string]interface{}{"workflow_id": "wkf_1", "title": "Only Title", "steps": []interface{}{}},
+			"data": map[string]interface{}{"workflow_id": "wkf_1", "title": "Only Title"},
 		},
 	}
 	reg.Register(stub)
@@ -491,9 +491,30 @@ func TestBaseWorkflowExecuteUpdateOmittedStepsClearsWorkflow(t *testing.T) {
 	if err := json.Unmarshal(stub.CapturedBody, &body); err != nil {
 		t.Fatalf("request body invalid JSON: %v", err)
 	}
-	steps, ok := body["steps"].([]interface{})
-	if !ok || len(steps) != 0 {
-		t.Fatalf("request steps=%#v, want []", body["steps"])
+	if steps, ok := body["steps"]; ok {
+		t.Fatalf("request steps=%#v, want field omitted", steps)
+	}
+}
+
+func TestBaseWorkflowDryRunUpdatePreservesOmittedSteps(t *testing.T) {
+	factory, stdout, _ := newExecuteFactory(t)
+	args := []string{
+		"+workflow-update",
+		"--base-token", "app_x",
+		"--workflow-id", "wkf_1",
+		"--json", `{"title":"Only Title"}`,
+		"--dry-run",
+		"--format", "pretty",
+	}
+	if err := runShortcut(t, BaseWorkflowUpdate, args, factory, stdout); err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	got := stdout.String()
+	if !strings.Contains(got, "PUT /open-apis/base/v3/bases/app_x/workflows/wkf_1") || !strings.Contains(got, `"title":"Only Title"`) {
+		t.Fatalf("stdout=%s", got)
+	}
+	if strings.Contains(got, `"steps":`) {
+		t.Fatalf("dry-run injected omitted steps: %s", got)
 	}
 }
 

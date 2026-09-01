@@ -24,7 +24,7 @@ var BaseWorkflowUpdate = common.Shortcut{
 	},
 	Tips: []string{
 		"lark-cli base +workflow-update --base-token <base_token> --workflow-id <workflow_id> --json @workflow.json",
-		"PUT uses full replacement semantics; omitting steps clears the existing workflow steps.",
+		"PUT uses full replacement semantics.",
 		"Use +workflow-get first, then edit the returned definition and keep title/status/steps fields you do not intend to change.",
 		"workflow-id must start with wkf; do not pass a tbl table ID.",
 		"Step ids must be unique, and every next/children link must reference an existing step id.",
@@ -40,14 +40,14 @@ var BaseWorkflowUpdate = common.Shortcut{
 		if strings.TrimSpace(runtime.Str("workflow-id")) == "" {
 			return baseFlagErrorf("--workflow-id must not be blank")
 		}
-		if _, err := parseWorkflowUpdateBodyJSON(runtime); err != nil {
+		if _, err := parseWorkflowBodyJSON(runtime); err != nil {
 			return err
 		}
 		return nil
 	},
 	DryRun: func(ctx context.Context, runtime *common.RuntimeContext) *common.DryRunAPI {
 		var body map[string]interface{}
-		body, _ = parseWorkflowUpdateBodyJSON(runtime)
+		body, _ = parseWorkflowBodyJSON(runtime)
 		return common.NewDryRunAPI().
 			PUT("/open-apis/base/v3/bases/:base_token/workflows/:workflow_id").
 			Body(body).
@@ -55,7 +55,7 @@ var BaseWorkflowUpdate = common.Shortcut{
 			Set("workflow_id", runtime.Str("workflow-id"))
 	},
 	Execute: func(ctx context.Context, runtime *common.RuntimeContext) error {
-		body, err := parseWorkflowUpdateBodyJSON(runtime)
+		body, err := parseWorkflowBodyJSON(runtime)
 		if err != nil {
 			return err
 		}
