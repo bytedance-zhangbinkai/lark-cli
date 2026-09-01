@@ -25,11 +25,12 @@
 - TestBase_RoleWorkflow: proves `+advperm-enable`, `+role-create`, `+role-list`, `+role-get`, and `+role-update`; key `t.Run(...)` proof points are `list as bot`, `get as bot`, and `update as bot`.
 - TestBaseFormListDryRun_UsesBaseAndTableIdentifiers: proves `+form-list` dry-run request shape uses Base and table identifiers in the endpoint.
 - TestBaseFormQuestionsCreateVisibleRuleDryRun / TestBaseFormQuestionsUpdateVisibleRuleDryRun: prove `+form-questions-create` / `+form-questions-update` dry-run request shape and that the optional `visible_rule` display condition is transcribed verbatim into the request body.
+- TestBaseFormQuestionOrderDryRun / TestBaseFormQuestionOrderHelpShowsSameSetWorkflow: prove `+view-set-visible-fields` sends a complete 12-question Form order unchanged through the existing View endpoint and publishes the Form same-set/read-modify-write/readback contract in help.
 - TestBaseTableCopyDryRun: proves `+table-copy` and `+table-copy-status` request shapes, including the schema-safe default, table-name path escaping, explicit all+wait orchestration, Cobra duration parsing, and the opaque task ID body.
 - TestBaseTableCopyWorkflow: feature-gated by `LARK_CLI_E2E_BASE_TABLE_COPY_READY=1` until the OpenAPI is deployed; creates a source table and record, proves schema-only copy, all no-wait plus status, all wait, record inclusion, and cleanup.
 - TestBaseTemplateCenterDryRun: proves `+template-categories`, `+template-list`, and `+template-search` request shapes; the list case covers category, limit, and offset parameters.
 - Cleanup note: `+table-delete` and `+role-delete` only run in cleanup and are intentionally left uncovered.
-- Blocked area: table-copy live integration remains deployment-gated; dashboard, field, most record operations, most form operations, view, and workflow operations still lack deterministic create/read/update workflows in this suite.
+- Blocked area: table-copy and Form question-order live integration remain deployment-gated; dashboard, field, most record operations, most form operations, remaining view operations, and workflow operations still lack deterministic create/read/update workflows in this suite.
 
 ## Command Table
 
@@ -119,7 +120,7 @@
 | ✕ | base +view-get-group | shortcut |  | none | view workflows not covered |
 | ✕ | base +view-get-sort | shortcut |  | none | view workflows not covered |
 | ✕ | base +view-get-timebar | shortcut |  | none | view workflows not covered |
-| ✕ | base +view-get-visible-fields | shortcut |  | none | view workflows not covered |
+| ✓ | base +view-get-visible-fields | shortcut | base_form_question_order_workflow_test.go::TestBaseFormQuestionOrderWorkflow; base_form_question_order_dryrun_test.go::TestBaseFormQuestionOrderHelpShowsSameSetWorkflow | `--view-id=<form_id>`; live readback + help | live workflow is deployment-gated by `LARK_CLI_E2E_BASE_FORM_ORDER_READY=1` |
 | ✕ | base +view-list | shortcut |  | none | view workflows not covered |
 | ✕ | base +view-rename | shortcut |  | none | view workflows not covered |
 | ✕ | base +view-set-card | shortcut |  | none | view workflows not covered |
@@ -127,7 +128,7 @@
 | ✕ | base +view-set-group | shortcut |  | none | view workflows not covered |
 | ✕ | base +view-set-sort | shortcut |  | none | view workflows not covered |
 | ✕ | base +view-set-timebar | shortcut |  | none | view workflows not covered |
-| ✕ | base +view-set-visible-fields | shortcut |  | none | view workflows not covered |
+| ✓ | base +view-set-visible-fields | shortcut | base_form_question_order_dryrun_test.go::TestBaseFormQuestionOrderDryRun; base_form_question_order_workflow_test.go::TestBaseFormQuestionOrderWorkflow | complete `visible_fields` Form question-ID array; dry-run + live | live workflow is deployment-gated by `LARK_CLI_E2E_BASE_FORM_ORDER_READY=1` |
 | ✕ | base +workflow-create | shortcut |  | none | workflow CRUD not covered |
 | ✕ | base +workflow-disable | shortcut |  | none | workflow CRUD not covered |
 | ✕ | base +workflow-enable | shortcut |  | none | workflow CRUD not covered |

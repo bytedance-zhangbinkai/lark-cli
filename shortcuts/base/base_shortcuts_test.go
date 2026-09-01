@@ -1382,6 +1382,38 @@ func TestBaseFormQuestionsUpdateHelpGuidesFullOverwrite(t *testing.T) {
 	}
 }
 
+func TestBaseVisibleFieldsHelpDistinguishesFormSemantics(t *testing.T) {
+	getTips := strings.Join(BaseViewGetVisibleFields.Tips, "\n")
+	for _, want := range []string{
+		"grid, kanban, gallery, calendar, gantt, and form",
+		"query form is not supported",
+		"current visible questions in question order",
+		"+form-questions-list",
+		"stable question IDs",
+	} {
+		if !strings.Contains(getTips, want) {
+			t.Fatalf("get-visible-fields tips missing %q:\n%s", want, getTips)
+		}
+	}
+
+	setTips := strings.Join(BaseViewSetVisibleFields.Tips, "\n")
+	for _, want := range []string{
+		"standard view",
+		"controls both visibility and order",
+		"primary field to the first position",
+		"every currently visible question exactly once",
+		"only reorders that same set",
+		"does not add, remove, show, or hide questions",
+		"does not force the primary field first",
+		"visible_rule dependency",
+		"fresh readback",
+	} {
+		if !strings.Contains(setTips, want) {
+			t.Fatalf("set-visible-fields tips missing %q:\n%s", want, setTips)
+		}
+	}
+}
+
 func TestBaseAttachmentHelpGuidesAgents(t *testing.T) {
 	tests := []struct {
 		name     string
