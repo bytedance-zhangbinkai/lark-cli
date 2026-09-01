@@ -54,63 +54,18 @@
 
 | 场景 | 步骤组合 | 示例 |
 |------|---------|------|
-| 新增触发+通知 | AddRecordTrigger → LarkMessageAction | [下方](#示例1-新增记录触发--发送消息) |
-| 定时触发+AI 分析 | TimerTrigger → AIAnalysisAction | [下方](#示例-ai-分析-定时分析-base-数据并回读核验) |
+| 新增触发+通知 | AddRecordTrigger → LarkMessageAction | [下方](#示例-1-新增记录触发--发送消息) |
+| 定时触发+AI 分析 | TimerTrigger → AIAnalysisAction | [下方](#示例-7-ai-分析定时分析-base-数据并回读核验) |
 | 按钮点击+调用外部接口+写入日志 | ButtonTrigger → HTTPClientAction → AddRecordAction | [下方](#示例-6-按钮触发--调用外部接口--写入同步日志) |
-| 定时+循环 | TimerTrigger → FindRecordAction → Loop → LarkMessageAction | [下方](#示例2-定时触发--查找记录--循环遍历--发送消息) |
-| 条件判断 | ... → IfElseBranch → 分支处理 | [下方](#示例3-条件分支-ifelsebranch) |
-| 多路分类 | ... → SwitchBranch → 多分支处理 | [下方](#示例4-多路分支-switchbranch) |
-| AI 分类 | ... → AIClassificationBranch → 分类后处理 | [下方](#示例-ai-分类用户反馈自动分流) |
-| 复杂组合 | 定时+查找+循环+分支+消息 | [下方](#示例5-组合场景-定时查找循环分支消息) |
+| 定时+循环 | TimerTrigger → FindRecordAction → Loop → LarkMessageAction | [下方](#示例-2-定时触发--查找记录--循环遍历--发送消息) |
+| 条件判断 | ... → IfElseBranch → 分支处理 | [下方](#示例-3-条件分支ifelsebranch) |
+| 多路分类 | ... → SwitchBranch → 多分支处理 | [下方](#示例-4-多路分支switchbranch) |
+| AI 分类 | ... → AIClassificationBranch → 分类后处理 | [下方](#示例-8-ai-分类用户反馈自动分流) |
+| 复杂组合 | 定时+查找+循环+分支+消息 | [下方](#示例-5-组合场景定时查找循环分支消息) |
 
 ---
 
 ## 完整示例
-
-### 示例: AI 分析 - 定时分析 Base 数据并回读核验
-
-**场景**: 每天早上 9 点分析「订单表」和「退款表」的昨日趋势。创建后先回读确认四项配置已落盘；修改时始终先 `+workflow-get` 再做全量更新。
-
-```json
-{
-  "client_token": "1704067200-ai-analysis",
-  "title": "每日经营 AI 分析",
-  "steps": [
-    {
-      "id": "step_timer",
-      "type": "TimerTrigger",
-      "title": "每天早上 9 点触发",
-      "next": "step_ai_analysis",
-      "data": {
-        "rule": "DAILY",
-        "start_time": "2025-01-01 09:00",
-        "is_never_end": true
-      }
-    },
-    {
-      "id": "step_ai_analysis",
-      "type": "AIAnalysisAction",
-      "title": "分析昨日经营异常",
-      "next": null,
-      "data": {
-        "analysis_task": [
-          { "value_type": "text", "value": "分析昨日订单趋势、退款异常和可能原因，并给出今日行动建议" }
-        ],
-        "analysis_table_names": ["订单表", "退款表"],
-        "identity_type": "maker",
-        "output_instruction": "先给结论，再列证据与行动建议"
-      }
-    }
-  ]
-}
-```
-
-**推荐操作顺序**:
-- 创建后立刻执行 `lark-cli base +workflow-get --base-token <base_token> --workflow-id <workflow_id> --as user`，确认 `steps[].type` 仍为 `AIAnalysisAction`，且四个字段语义与提交一致。
-- 更新已有流程时，先用 `+workflow-get` 读取完整 JSON，只改目标字段，再把完整 body 传给 `+workflow-update`；不要手写局部 patch。
-- `analysis_table_names: []` 表示当前 Base 的全部数据表；若要限制范围，请显式列出表名。
-- `identity_type: "maker"` 表示固定流程身份；`identity_type: "triggerPersonal"` 仅适用于能提供真实触发者身份的触发器。
-- AI 分析是异步执行链路：配置保存成功、工作流启用成功、单次节点执行成功是三件事，需分别观察。
 
 ### 示例 1: 新增记录触发 + 发送消息
 
@@ -517,135 +472,6 @@
 
 ---
 
-### 示例 AI 分类：用户反馈自动分流
-
-**场景**: 当用户反馈表新增记录时，AI 根据反馈内容分类为 Bug、功能建议或体验问题；无法判断时进入其他分支并通知人工复核。
-
-```json
-{
-  "client_token": "1704067206",
-  "title": "用户反馈自动分流",
-  "steps": [
-    {
-      "id": "step_trigger",
-      "type": "AddRecordTrigger",
-      "title": "新增反馈时触发",
-      "next": "step_ai_classify",
-      "data": {
-        "table_name": "用户反馈表",
-        "watched_field_name": "反馈详情"
-      }
-    },
-    {
-      "id": "step_ai_classify",
-      "type": "AIClassificationBranch",
-      "title": "AI 判断反馈类型",
-      "children": {
-        "links": [
-          { "kind": "case", "to": "step_bug_action", "label": "branch_1", "desc": "Bug" },
-          { "kind": "case", "to": "step_feature_action", "label": "branch_2", "desc": "功能建议" },
-          { "kind": "case", "to": "step_experience_action", "label": "branch_3", "desc": "体验问题" },
-          { "kind": "case", "to": "step_other_action", "label": "default", "desc": "默认分支" }
-        ]
-      },
-      "next": null,
-      "data": {
-        "classes": [
-          {
-            "name": "Bug",
-            "desc": "功能报错、异常、崩溃、无法使用或结果错误"
-          },
-          {
-            "name": "功能建议",
-            "desc": "希望新增能力或改变产品行为"
-          },
-          {
-            "name": "体验问题",
-            "desc": "流程繁琐、操作难懂、性能慢或界面体验不佳"
-          }
-        ],
-        "content": [
-          { "value_type": "text", "value": "请根据反馈标题和反馈详情判断类型：" },
-          { "value_type": "ref", "value": "$.step_trigger.fldFeedbackTitle" },
-          { "value_type": "text", "value": " " },
-          { "value_type": "ref", "value": "$.step_trigger.fldFeedbackDetail" }
-        ],
-        "classification_rule": "有明确故障现象时优先归入 Bug；同时包含多个诉求时，以最影响用户完成任务的问题为准；信息不足时进入默认分支。"
-      }
-    },
-    {
-      "id": "step_bug_action",
-      "type": "SetRecordAction",
-      "title": "标记为 Bug",
-      "next": null,
-      "data": {
-        "table_name": "用户反馈表",
-        "ref_info": { "step_id": "step_trigger" },
-        "field_values": [
-          { "field_name": "分类", "value": [{ "value_type": "text", "value": "Bug" }] }
-        ]
-      }
-    },
-    {
-      "id": "step_feature_action",
-      "type": "SetRecordAction",
-      "title": "标记为功能建议",
-      "next": null,
-      "data": {
-        "table_name": "用户反馈表",
-        "ref_info": { "step_id": "step_trigger" },
-        "field_values": [
-          { "field_name": "分类", "value": [{ "value_type": "text", "value": "功能建议" }] }
-        ]
-      }
-    },
-    {
-      "id": "step_experience_action",
-      "type": "SetRecordAction",
-      "title": "标记为体验问题",
-      "next": null,
-      "data": {
-        "table_name": "用户反馈表",
-        "ref_info": { "step_id": "step_trigger" },
-        "field_values": [
-          { "field_name": "分类", "value": [{ "value_type": "text", "value": "体验问题" }] }
-        ]
-      }
-    },
-    {
-      "id": "step_other_action",
-      "type": "LarkMessageAction",
-      "title": "通知人工复核",
-      "next": null,
-      "data": {
-        "receiver": [{ "value_type": "user", "value": { "id": "ou_xxxx", "name": "负责人" } }],
-        "send_to_everyone": false,
-        "title": [{ "value_type": "text", "value": "反馈需要人工复核" }],
-        "content": [
-          { "value_type": "text", "value": "AI 未能确定反馈分类，请人工确认：" },
-          { "value_type": "ref", "value": "$.step_trigger.fldFeedbackDetail" }
-        ],
-        "btn_list": []
-      }
-    }
-  ]
-}
-```
-
-标准操作顺序：
-1. 创建：`lark-cli base +workflow-create --base-token <base_token> --json @workflow.json`
-2. 回读：`lark-cli base +workflow-get --base-token <base_token> --workflow-id <workflow_id>`
-3. 更新：先保存回读结果，只修改目标字段，再执行 `+workflow-update --json @workflow.json`
-4. 再次回读：确认 `AIClassificationBranch` 的 `classes`、`content`、`classification_rule`、`no_match_action` 和 `children.links` 均未丢失
-
-关键点：
-- `AIClassificationBranch.data` 使用公开 Agent Data：`classes`、`content`、`classification_rule`、`no_match_action`。
-- `AIClassificationBranch.children.links` 使用 `kind: "case"`；普通分类使用 `branch_1`、`branch_2` 等标签，默认分支使用 `label: "default"`。
-- `classes[i].name` 与对应普通分支 `children.links[i].desc` 保持一致；缺省或 `no_match_action: "classifyToOther"` 时必须提供默认分支。
-- AI 分类可能处理业务敏感信息；创建或更新后用 `+workflow-get` 确认最终保存结果，不要只依赖提交前 JSON。
-
----
-
 ### 示例 5: 组合场景（定时+查找+循环+分支+消息）
 
 **场景**: 每天早上 9 点，查找昨天的订单，按金额分级，给不同级别的销售发送不同的通知。
@@ -914,6 +740,187 @@
 - `HTTPClientAction.response_value` 中声明了哪些字段，后续节点就只能引用这些字段；例如 `$.step_call_crm_api.body.success`、`$.step_call_crm_api.body.message`
 - `AddRecordAction` 常用于写日志表、操作审计表、同步结果表，便于追踪谁在什么时候触发了外部调用
 - 示例里的 `fldLeadName` / `fldMobile` / `fldCompany` / `fldOwner` 只是占位的 fieldId，请以实际表字段 ID 为准
+
+---
+
+### 示例 7: AI 分析（定时分析 Base 数据）
+
+**场景**: 每天早上 9 点分析「订单表」和「退款表」的昨日趋势。
+
+```json
+{
+  "client_token": "1704067200-ai-analysis",
+  "title": "每日经营 AI 分析",
+  "steps": [
+    {
+      "id": "step_timer",
+      "type": "TimerTrigger",
+      "title": "每天早上 9 点触发",
+      "next": "step_ai_analysis",
+      "data": {
+        "rule": "DAILY",
+        "start_time": "2025-01-01 09:00",
+        "is_never_end": true
+      }
+    },
+    {
+      "id": "step_ai_analysis",
+      "type": "AIAnalysisAction",
+      "title": "分析昨日经营异常",
+      "next": null,
+      "data": {
+        "analysis_task": [
+          { "value_type": "text", "value": "分析昨日订单趋势、退款异常和可能原因，并给出今日行动建议" }
+        ],
+        "analysis_table_names": ["订单表", "退款表"],
+        "identity_type": "maker",
+        "output_instruction": "先给结论，再列证据与行动建议"
+      }
+    }
+  ]
+}
+```
+
+**关键点**:
+- `analysis_table_names: []` 表示当前 Base 的全部数据表；若要限制范围，请显式列出表名。
+- `identity_type: "maker"` 表示固定流程身份；`identity_type: "triggerPersonal"` 仅适用于能提供真实触发者身份的触发器。
+
+---
+
+### 示例 8: AI 分类（用户反馈自动分流）
+
+**场景**: 当用户反馈表新增记录时，AI 根据反馈内容分类为 Bug、功能建议或体验问题；无法判断时进入其他分支并通知人工复核。
+
+```json
+{
+  "client_token": "1704067206",
+  "title": "用户反馈自动分流",
+  "steps": [
+    {
+      "id": "step_trigger",
+      "type": "AddRecordTrigger",
+      "title": "新增反馈时触发",
+      "next": "step_ai_classify",
+      "data": {
+        "table_name": "用户反馈表",
+        "watched_field_name": "反馈详情"
+      }
+    },
+    {
+      "id": "step_ai_classify",
+      "type": "AIClassificationBranch",
+      "title": "AI 判断反馈类型",
+      "children": {
+        "links": [
+          { "kind": "case", "to": "step_bug_action", "label": "branch_1", "desc": "Bug" },
+          { "kind": "case", "to": "step_feature_action", "label": "branch_2", "desc": "功能建议" },
+          { "kind": "case", "to": "step_experience_action", "label": "branch_3", "desc": "体验问题" },
+          { "kind": "case", "to": "step_other_action", "label": "default", "desc": "默认分支" }
+        ]
+      },
+      "next": null,
+      "data": {
+        "classes": [
+          {
+            "name": "Bug",
+            "desc": "功能报错、异常、崩溃、无法使用或结果错误"
+          },
+          {
+            "name": "功能建议",
+            "desc": "希望新增能力或改变产品行为"
+          },
+          {
+            "name": "体验问题",
+            "desc": "流程繁琐、操作难懂、性能慢或界面体验不佳"
+          }
+        ],
+        "content": [
+          { "value_type": "text", "value": "请根据反馈标题和反馈详情判断类型：" },
+          { "value_type": "ref", "value": "$.step_trigger.fldFeedbackTitle" },
+          { "value_type": "text", "value": " " },
+          { "value_type": "ref", "value": "$.step_trigger.fldFeedbackDetail" }
+        ],
+        "classification_rule": "有明确故障现象时优先归入 Bug；同时包含多个诉求时，以最影响用户完成任务的问题为准；信息不足时进入默认分支。"
+      }
+    },
+    {
+      "id": "step_bug_action",
+      "type": "SetRecordAction",
+      "title": "标记为 Bug",
+      "next": null,
+      "data": {
+        "table_name": "用户反馈表",
+        "ref_info": { "step_id": "step_trigger" },
+        "field_values": [
+          { "field_name": "分类", "value": [{ "value_type": "text", "value": "Bug" }] }
+        ]
+      }
+    },
+    {
+      "id": "step_feature_action",
+      "type": "SetRecordAction",
+      "title": "标记为功能建议",
+      "next": null,
+      "data": {
+        "table_name": "用户反馈表",
+        "ref_info": { "step_id": "step_trigger" },
+        "field_values": [
+          { "field_name": "分类", "value": [{ "value_type": "text", "value": "功能建议" }] }
+        ]
+      }
+    },
+    {
+      "id": "step_experience_action",
+      "type": "SetRecordAction",
+      "title": "标记为体验问题",
+      "next": null,
+      "data": {
+        "table_name": "用户反馈表",
+        "ref_info": { "step_id": "step_trigger" },
+        "field_values": [
+          { "field_name": "分类", "value": [{ "value_type": "text", "value": "体验问题" }] }
+        ]
+      }
+    },
+    {
+      "id": "step_other_action",
+      "type": "LarkMessageAction",
+      "title": "通知人工复核",
+      "next": null,
+      "data": {
+        "receiver": [{ "value_type": "user", "value": { "id": "ou_xxxx", "name": "负责人" } }],
+        "send_to_everyone": false,
+        "title": [{ "value_type": "text", "value": "反馈需要人工复核" }],
+        "content": [
+          { "value_type": "text", "value": "AI 未能确定反馈分类，请人工确认：" },
+          { "value_type": "ref", "value": "$.step_trigger.fldFeedbackDetail" }
+        ],
+        "btn_list": []
+      }
+    }
+  ]
+}
+```
+
+关键点：
+- `AIClassificationBranch.data` 使用公开 Agent Data：`classes`、`content`、`classification_rule`、`no_match_action`。
+- `AIClassificationBranch.children.links` 使用 `kind: "case"`；普通分类使用 `branch_1`、`branch_2` 等标签，默认分支使用 `label: "default"`。
+- `classes[i].name` 与对应普通分支 `children.links[i].desc` 保持一致；缺省或 `no_match_action: "classifyToOther"` 时必须提供默认分支。
+
+**`no_match_action: "fail"` 差异**：当没有匹配分类时需要让当前节点失败，只修改以下部分；普通分类边和 `classes` / `content` 保持不变。
+
+```diff
+ "data": {
++  "no_match_action": "fail"
+ }
+ "children": {
+   "links": [
+-    { "kind": "case", "to": "step_other_action", "label": "default", "desc": "默认分支" }
+   ]
+ }
+```
+
+如果 `step_other_action` 仅由默认分支引用，应同时从 `steps` 中删除该节点。
 
 ---
 
