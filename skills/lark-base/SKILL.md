@@ -209,7 +209,7 @@ Form 依附于 Table，以 Field 作为题目，每次有效提交会创建一�
 
 1. **读取 Table 中的表单配置：** 使用 `+form-list` / `+form-get` 读取表单，使用 `+form-questions-list` 读取题目配置；这些命令使用表单所属的 `base_token + table_id`。
 2. **创建或修改 Table 中的表单配置：** 使用 `+form-create` / `+form-update` / `+form-delete` 管理表单；题目由 Table Field 承载，question ID 对应 `field_id`，创建和更新分别读取 [questions create](references/lark-base-form-questions-create.md) / [questions update](references/lark-base-form-questions-update.md)，删除使用 `+form-questions-delete`。
-3. **调整表单题目顺序：** 读取 [Form question ordering](references/lark-base-form-question-order.md)，用 `+view-get-visible-fields` 读取当前可见题目顺序，再用 `+view-set-visible-fields` 提交包含全部当前可见题目 ID 且每项恰好一次的目标顺序；该命令对 Form 只排序，不改变题目显隐或配置。
+3. **调整表单题目显隐和顺序：** 读取 [Form question visibility and ordering](references/lark-base-form-question-order.md)，用 `+view-get-visible-fields` 读取当前可见题目，再用 `+view-set-visible-fields` 提交最终需要展示的完整有序题目 ID 列表；省略当前可见题目会隐藏它，加入已有隐藏题目会重新展示。该命令不会自动补主字段，也不会修改题目展示配置。
 4. **管理表单分享：** 使用 `+form-share-get` / `+form-share-update` 管理启停、访问范围和匿名/登录要求；更新前先读取现状，每次只修改一个字段，布尔值显式传 `true` 或 `false`。
 5. **填写分享表单并提交：** 对表单分享链接使用 `+url-resolve` 取得 `share_token`，按 [Form detail](references/lark-base-form-detail.md) 执行 `+form-detail` 读取真实题目、必填项和显示条件，再按 [Form submit](references/lark-base-form-submit.md) 构造字段与附件并执行 `+form-submit`。
 
@@ -217,8 +217,8 @@ Form 依附于 Table，以 Field 作为题目，每次有效提交会创建一�
 
 - `+form-questions-create` 支持两种形态：新建字段题目需要 `title` + `type`；已有字段题目需要 `use_existing_field:true` + `field_id`。已有字段题目只是把该字段加入表单，不创建新字段，也不改变已有记录数据；不要给该形态携带 `type`、`style`、`options` 等字段定义属性。
 - 创建问题前先 `+form-questions-list`。若目标标题已经存在，除非用户明确要求同名独立问题，否则优先用 `+form-questions-update` 修改题目配置，不要先创建同名问题再删除旧问题。
-- `+form-questions-delete` 是高风险写操作。默认会删除承载问题的底层 Field 及该字段所有记录数据；只想把题目移出表单并保留字段/数据时必须传 `--keep-field`。保留字段后可用 `+form-questions-create --questions '[{"use_existing_field":true,"field_id":"<field_id>"}]'` 加回表单。
-- 不要用 `+form-questions-update`、`pre_question_id` 或逐题 PATCH 调整顺序。排序前 fresh-read 题目和 `visible_fields`，按稳定题目 ID 提交完整同集合，并在写后 fresh-read 两个接口验证顺序、显隐和配置；具体流程读取 [Form question ordering](references/lark-base-form-question-order.md)。
+- `+form-questions-delete` 是高风险写操作。默认会删除承载问题的底层 Field 及该字段所有记录数据；只想隐藏题目并保留字段、数据和题目配置时必须传 `--keep-field`。保存该题目的稳定 ID，之后用 `+view-set-visible-fields` 把它加入完整目标列表即可重新展示。
+- 不要用 `+form-questions-update`、`pre_question_id` 或逐题 PATCH 调整显隐或顺序。写入前 fresh-read 题目和 `visible_fields`，按稳定题目 ID 构造完整目标态，并在写后 fresh-read 两个接口验证顺序、显隐和配置；具体流程读取 [Form question visibility and ordering](references/lark-base-form-question-order.md)。
 
 ## Dashboard Block
 

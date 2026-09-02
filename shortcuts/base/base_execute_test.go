@@ -4774,8 +4774,8 @@ func TestBaseFormVisibleFieldsExecuteContract(t *testing.T) {
 				"msg":  "invalid visible fields",
 				"data": map[string]interface{}{
 					"error": map[string]interface{}{
-						"message": "Form visible_fields must contain every currently visible question exactly once.",
-						"hint":    "GET the current questions and retry with their complete ordered ID set.",
+						"message": "The field is not a question in this Form.",
+						"hint":    "Add the existing table field as a Form question first, then retry.",
 						"logid":   "202609010001FORMORDER",
 					},
 				},
@@ -4799,7 +4799,7 @@ func TestBaseFormVisibleFieldsExecuteContract(t *testing.T) {
 		if problem.Code != 800010407 || problem.LogID != "202609010001FORMORDER" {
 			t.Fatalf("code/log_id=%d/%q", problem.Code, problem.LogID)
 		}
-		if !strings.Contains(problem.Message, "exactly once") || !strings.Contains(problem.Hint, "complete ordered ID set") {
+		if !strings.Contains(problem.Message, "not a question") || !strings.Contains(problem.Hint, "Add the existing table field") {
 			t.Fatalf("message/hint=%q/%q", problem.Message, problem.Hint)
 		}
 		if strings.TrimSpace(stdout.String()) != "" {

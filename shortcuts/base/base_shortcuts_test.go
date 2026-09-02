@@ -1382,31 +1382,22 @@ func TestBaseFormQuestionsUpdateHelpGuidesFullOverwrite(t *testing.T) {
 	}
 }
 
-func TestBaseVisibleFieldsHelpDistinguishesFormSemantics(t *testing.T) {
-	getTips := strings.Join(BaseViewGetVisibleFields.Tips, "\n")
-	for _, want := range []string{
-		"grid, kanban, gallery, calendar, gantt, and form",
-		"query form is not supported",
-		"current visible questions in question order",
-		"+form-questions-list",
-		"stable question IDs",
-	} {
-		if !strings.Contains(getTips, want) {
-			t.Fatalf("get-visible-fields tips missing %q:\n%s", want, getTips)
-		}
-	}
-
+func TestBaseViewSetVisibleFieldsHelpDescribesFormTargetState(t *testing.T) {
 	setTips := strings.Join(BaseViewSetVisibleFields.Tips, "\n")
 	for _, want := range []string{
 		"standard view",
 		"controls both visibility and order",
 		"primary field to the first position",
-		"every currently visible question exactly once",
-		"only reorders that same set",
-		"does not add, remove, show, or hide questions",
-		"does not force the primary field first",
+		"complete final ordered list",
+		"omitted visible questions are hidden",
+		"included hidden Form questions are shown",
+		"primary field is not added automatically",
+		"empty list hides every question",
+		"not already a Form question is rejected",
+		"use_existing_field:true",
 		"visible_rule dependency",
-		"fresh readback",
+		"fresh-read both visible_fields and Form questions",
+		"preserved question configuration",
 	} {
 		if !strings.Contains(setTips, want) {
 			t.Fatalf("set-visible-fields tips missing %q:\n%s", want, setTips)
