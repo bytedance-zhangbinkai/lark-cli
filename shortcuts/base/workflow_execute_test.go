@@ -406,6 +406,71 @@ func TestBaseWorkflowExecuteUpdatePreservesAIClassificationWithoutMode(t *testin
 	}
 }
 
+func TestBaseWorkflowExecuteUpdatePreservesOmittedAIClassificationFailWithoutDefault(t *testing.T) {
+	factory, stdout, reg := newExecuteFactory(t)
+	stub := &httpmock.Stub{
+		Method: "PUT",
+		URL:    "/open-apis/base/v3/bases/app_x/workflows/wkf_1",
+		Body: map[string]interface{}{
+			"code": 0,
+			"data": map[string]interface{}{"workflow_id": "wkf_1", "title": "Language classify"},
+		},
+	}
+	reg.Register(stub)
+
+	body := `{
+		"title": "Language classify",
+		"status": "enabled",
+		"steps": [
+			{"id": "step_trigger", "type": "AddRecordTrigger", "next": "step_classify", "data": {}},
+			{
+				"id": "step_classify",
+				"type": "AIClassificationBranch",
+				"children": {"links":[
+					{"kind":"case","label":"branch_1","desc":"English","to":"step_english"},
+					{"kind":"case","label":"branch_2","desc":"Chinese","to":"step_chinese"}
+				]},
+				"data": {
+					"classes": [
+						{"name": "English", "desc": "English text"},
+						{"name": "Chinese", "desc": "Chinese text"}
+					],
+					"content": [{"value_type": "text", "value": "Classify"}]
+				}
+			},
+			{"id": "step_english", "type": "SetRecordAction", "next": null, "data": {}},
+			{"id": "step_chinese", "type": "SetRecordAction", "next": null, "data": {}}
+		]
+	}`
+	if err := runShortcut(t, BaseWorkflowUpdate, []string{"+workflow-update", "--base-token", "app_x", "--workflow-id", "wkf_1", "--json", body}, factory, stdout); err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	got := string(stub.CapturedBody)
+	if strings.Contains(got, `"no_match_action"`) || strings.Contains(got, `"label":"default"`) {
+		t.Fatalf("update should preserve omitted fail semantics without injecting a default branch: %s", got)
+	}
+
+	dryRunFactory, dryRunStdout, _ := newExecuteFactory(t)
+	dryRunArgs := []string{
+		"+workflow-update",
+		"--base-token", "app_x",
+		"--workflow-id", "wkf_1",
+		"--json", body,
+		"--dry-run",
+		"--format", "pretty",
+	}
+	if err := runShortcut(t, BaseWorkflowUpdate, dryRunArgs, dryRunFactory, dryRunStdout); err != nil {
+		t.Fatalf("dry-run err=%v", err)
+	}
+	dryRun := dryRunStdout.String()
+	if !strings.Contains(dryRun, "PUT /open-apis/base/v3/bases/app_x/workflows/wkf_1") {
+		t.Fatalf("dry-run missing update request: %s", dryRun)
+	}
+	if strings.Contains(dryRun, `"no_match_action"`) || strings.Contains(dryRun, `"label": "default"`) {
+		t.Fatalf("dry-run should preserve omitted fail semantics without injecting a default branch: %s", dryRun)
+	}
+}
+
 func TestBaseWorkflowExecuteCreateValidateAIAnalysisData(t *testing.T) {
 	t.Run("rejects table names string", func(t *testing.T) {
 		factory, stdout, _ := newExecuteFactory(t)

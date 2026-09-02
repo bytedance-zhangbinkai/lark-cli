@@ -33,14 +33,14 @@ var BaseWorkflowCreate = common.Shortcut{
 		if strings.TrimSpace(runtime.Str("base-token")) == "" {
 			return baseFlagErrorf("--base-token must not be blank")
 		}
-		if _, err := parseWorkflowBodyJSON(runtime); err != nil {
+		if _, err := parseWorkflowBodyJSON(runtime, workflowWriteCreate); err != nil {
 			return err
 		}
 		return nil
 	},
 	DryRun: func(ctx context.Context, runtime *common.RuntimeContext) *common.DryRunAPI {
 		var body map[string]interface{}
-		if parsed, err := parseWorkflowBodyJSON(runtime); err == nil {
+		if parsed, err := parseWorkflowBodyJSON(runtime, workflowWriteCreate); err == nil {
 			body = parsed
 		}
 		return common.NewDryRunAPI().
@@ -49,7 +49,7 @@ var BaseWorkflowCreate = common.Shortcut{
 			Set("base_token", runtime.Str("base-token"))
 	},
 	Execute: func(ctx context.Context, runtime *common.RuntimeContext) error {
-		body, err := parseWorkflowBodyJSON(runtime)
+		body, err := parseWorkflowBodyJSON(runtime, workflowWriteCreate)
 		if err != nil {
 			return err
 		}
