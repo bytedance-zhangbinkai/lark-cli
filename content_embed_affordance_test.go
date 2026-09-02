@@ -4,7 +4,6 @@
 package main
 
 import (
-	"io/fs"
 	"slices"
 	"strings"
 	"testing"
@@ -13,31 +12,6 @@ import (
 	"github.com/larksuite/cli/internal/meta"
 	docshortcuts "github.com/larksuite/cli/shortcuts/doc"
 )
-
-func TestEmbeddedBaseFormOrderingGuidanceIsReachable(t *testing.T) {
-	raw, ok := affordance.For("base", "+view-set-visible-fields")
-	if !ok {
-		t.Fatal("embedded affordance entry base/+view-set-visible-fields is missing")
-	}
-	parsed, ok := (meta.Method{Affordance: raw}).ParsedAffordance()
-	if !ok {
-		t.Fatalf("embedded base Form ordering affordance is invalid: %s", raw)
-	}
-	const referencePath = "lark-base/references/lark-base-form-question-order.md"
-	if !slices.Contains(parsed.Skills, referencePath) {
-		t.Fatalf("embedded base Form ordering skills = %v, want %q", parsed.Skills, referencePath)
-	}
-
-	reference, err := fs.ReadFile(embeddedContentFS, "skills/"+referencePath)
-	if err != nil {
-		t.Fatalf("embedded Form ordering reference is unreachable: %v", err)
-	}
-	for _, want := range []string{"complete ordered set", "stable question IDs", "Fresh-read both", "log_id"} {
-		if !strings.Contains(string(reference), want) {
-			t.Fatalf("embedded Form ordering reference missing %q", want)
-		}
-	}
-}
 
 // The shortcut owns its concise description, while affordance/docs.md owns
 // additive when-to-use guidance, tips, prerequisites, and skill references.

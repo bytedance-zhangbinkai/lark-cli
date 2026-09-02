@@ -1382,26 +1382,20 @@ func TestBaseFormQuestionsUpdateHelpGuidesFullOverwrite(t *testing.T) {
 	}
 }
 
-func TestBaseViewSetVisibleFieldsHelpDescribesFormTargetState(t *testing.T) {
+func TestBaseViewSetVisibleFieldsHelpIncludesFormInSharedContract(t *testing.T) {
 	setTips := strings.Join(BaseViewSetVisibleFields.Tips, "\n")
 	for _, want := range []string{
-		"standard view",
+		"form",
+		"JSON object",
 		"controls both visibility and order",
-		"primary field to the first position",
-		"complete final ordered list",
-		"omitted visible questions are hidden",
-		"included hidden Form questions are shown",
-		"primary field is not added automatically",
-		"empty list hides every question",
-		"not already a Form question is rejected",
-		"use_existing_field:true",
-		"visible_rule dependency",
-		"fresh-read both visible_fields and Form questions",
-		"preserved question configuration",
+		"include every field that should remain visible",
 	} {
 		if !strings.Contains(setTips, want) {
 			t.Fatalf("set-visible-fields tips missing %q:\n%s", want, setTips)
 		}
+	}
+	if strings.Contains(strings.ToLower(setTips), "only reorders that same set") {
+		t.Fatalf("set-visible-fields tips retain the obsolete Form same-set restriction:\n%s", setTips)
 	}
 }
 

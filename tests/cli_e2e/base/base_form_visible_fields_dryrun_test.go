@@ -37,7 +37,7 @@ func TestBaseFormVisibleFieldsDryRun(t *testing.T) {
 	require.Equal(t, "fld_a", clie2e.DryRunGet(out, "api.0.body.visible_fields.1").String(), out)
 }
 
-func TestBaseFormVisibleFieldsHelpShowsCompleteTargetContract(t *testing.T) {
+func TestBaseFormVisibleFieldsHelpUsesSharedViewContract(t *testing.T) {
 	setBaseDryRunConfigEnv(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
@@ -51,12 +51,10 @@ func TestBaseFormVisibleFieldsHelpShowsCompleteTargetContract(t *testing.T) {
 
 	help := result.Stdout
 	for _, want := range []string{
-		"complete final ordered list",
-		"omitted visible questions are hidden",
-		"included hidden Form questions are shown",
-		"primary field is not added automatically",
-		"visible_rule dependency",
-		"fresh-read both visible_fields and Form questions",
+		"form",
+		"Use a JSON object, not a bare array",
+		"visible_fields controls both visibility and order",
+		"include every field that should remain visible",
 	} {
 		require.Contains(t, help, want)
 	}
