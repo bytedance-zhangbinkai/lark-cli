@@ -493,7 +493,7 @@
 | `analysis_task` | 是 | TextRefItem[] 分析任务，支持 `text` / `ref` 混排；至少包含一项有效内容 |
 | `analysis_table_names` | 否 | string[] 分析数据范围；为空数组 `[]` 或省略时表示当前 Base 的全部数据表 |
 | `identity_type` | 是 | 数据访问身份：`maker`（固定流程身份） / `triggerPersonal`（流程触发者） |
-| `output_instruction` | 否 | string 输出要求；仅支持纯文本，不支持引用、附件或云文档模板 |
+| `output_instruction` | 否 | 仅支持纯文本 |
 
 
 ## Branch data 详细结构
