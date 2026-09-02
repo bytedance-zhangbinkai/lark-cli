@@ -24,6 +24,7 @@ var BaseWorkflowUpdate = common.Shortcut{
 	},
 	Tips: []string{
 		"lark-cli base +workflow-update --base-token <base_token> --workflow-id <workflow_id> --json @workflow.json",
+		"PUT uses full replacement semantics; omitting steps clears the existing workflow steps.",
 		"Use +workflow-get first, then edit the returned definition and keep title/status/steps fields you do not intend to change.",
 		"workflow-id must start with wkf; do not pass a tbl table ID.",
 		"Step ids must be unique, and every next/children link must reference an existing step id.",
