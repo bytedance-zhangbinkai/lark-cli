@@ -217,7 +217,7 @@ Form 依附于 Table，以 Field 作为题目，每次有效提交会创建一�
 
 - `+form-questions-create` 支持两种形态：新建字段题目需要 `title` + `type`；已有字段题目需要 `use_existing_field:true` + `field_id`。已有字段题目只是把该字段加入表单，不创建新字段，也不改变已有记录数据；不要给该形态携带 `type`、`style`、`options` 等字段定义属性。
 - 创建问题前先 `+form-questions-list`。若目标标题已经存在，除非用户明确要求同名独立问题，否则优先用 `+form-questions-update` 修改题目配置，不要先创建同名问题再删除旧问题。
-- `+form-questions-delete` 是高风险写操作。默认会删除承载问题的底层 Field 及该字段所有记录数据；只想隐藏题目并保留字段、数据和题目配置时必须传 `--keep-field`。隐藏前保存该题目的稳定 ID，因为当前读取接口不保证完整枚举隐藏 Form 成员；之后可用 `+view-set-visible-fields` 把它加入完整目标列表重新展示。
+- `+form-questions-delete` 是高风险写操作。默认会删除承载问题的底层 Field 及该字段所有记录数据；只想把题目移出表单并保留字段/数据时必须传 `--keep-field`。保留字段后可用 `+form-questions-create --questions '[{"use_existing_field":true,"field_id":"<field_id>"}]'` 加回表单。
 
 ## Dashboard Block
 
