@@ -24,14 +24,11 @@ var BaseWorkflowUpdate = common.Shortcut{
 	},
 	Tips: []string{
 		"lark-cli base +workflow-update --base-token <base_token> --workflow-id <workflow_id> --json @workflow.json",
-		"PUT uses full replacement semantics.",
 		"Use +workflow-get first, then edit the returned definition and keep title/status/steps fields you do not intend to change.",
 		"workflow-id must start with wkf; do not pass a tbl table ID.",
 		"Step ids must be unique, and every next/children link must reference an existing step id.",
 		"Updating does not enable or disable a workflow; call +workflow-enable or +workflow-disable separately.",
 		"Use lark-base-workflow.md as the module entry and lark-base-workflow-schema.md as the steps JSON SSOT; do not invent steps[].type/data/next/children from natural language.",
-		"AIClassificationBranch update accepts the public Agent Data shape classes/content/classification_rule/no_match_action; omit mode because AI classification only supports service-side Exclusive semantics.",
-		"AIClassificationBranch default branch must use children.links label default; label other is treated as invalid in CLI input.",
 	},
 	Validate: func(ctx context.Context, runtime *common.RuntimeContext) error {
 		if strings.TrimSpace(runtime.Str("base-token")) == "" {
