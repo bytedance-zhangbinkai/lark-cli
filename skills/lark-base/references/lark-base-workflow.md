@@ -744,7 +744,7 @@
 
 ### 示例 7: AI 分类（用户反馈自动分流）
 
-**场景**: 当用户反馈表新增记录时，AI 根据反馈内容分类为 Bug、功能建议或体验问题；无法判断时进入其他分支并通知人工复核。
+**场景**: 当用户反馈表新增记录时，AI 根据反馈内容分类为 Bug 或功能建议；无法判断时标记为待人工复核。
 
 ```json
 {
@@ -769,7 +769,6 @@
         "links": [
           { "kind": "case", "to": "step_bug_action", "label": "branch_1", "desc": "Bug" },
           { "kind": "case", "to": "step_feature_action", "label": "branch_2", "desc": "功能建议" },
-          { "kind": "case", "to": "step_experience_action", "label": "branch_3", "desc": "体验问题" },
           { "kind": "case", "to": "step_other_action", "label": "default", "desc": "默认分支" }
         ]
       },
@@ -783,16 +782,9 @@
           {
             "name": "功能建议",
             "desc": "希望新增能力或改变产品行为"
-          },
-          {
-            "name": "体验问题",
-            "desc": "流程繁琐、操作难懂、性能慢或界面体验不佳"
           }
         ],
         "content": [
-          { "value_type": "text", "value": "请根据反馈标题和反馈详情判断类型：" },
-          { "value_type": "ref", "value": "$.step_trigger.fldFeedbackTitle" },
-          { "value_type": "text", "value": " " },
           { "value_type": "ref", "value": "$.step_trigger.fldFeedbackDetail" }
         ],
         "classification_rule": "有明确故障现象时优先归入 Bug；同时包含多个诉求时，以最影响用户完成任务的问题为准；信息不足时进入默认分支。"
@@ -825,57 +817,23 @@
       }
     },
     {
-      "id": "step_experience_action",
+      "id": "step_other_action",
       "type": "SetRecordAction",
-      "title": "标记为体验问题",
+      "title": "标记为待人工复核",
       "next": null,
       "data": {
         "table_name": "用户反馈表",
         "ref_info": { "step_id": "step_trigger" },
         "field_values": [
-          { "field_name": "分类", "value": [{ "value_type": "text", "value": "体验问题" }] }
+          { "field_name": "分类", "value": [{ "value_type": "text", "value": "待人工复核" }] }
         ]
-      }
-    },
-    {
-      "id": "step_other_action",
-      "type": "LarkMessageAction",
-      "title": "通知人工复核",
-      "next": null,
-      "data": {
-        "receiver": [{ "value_type": "user", "value": { "id": "ou_xxxx", "name": "负责人" } }],
-        "send_to_everyone": false,
-        "title": [{ "value_type": "text", "value": "反馈需要人工复核" }],
-        "content": [
-          { "value_type": "text", "value": "AI 未能确定反馈分类，请人工确认：" },
-          { "value_type": "ref", "value": "$.step_trigger.fldFeedbackDetail" }
-        ],
-        "btn_list": []
       }
     }
   ]
 }
 ```
 
-关键点：
-- `AIClassificationBranch.data` 使用公开 Agent Data：`classes`、`content`、`classification_rule`、`no_match_action`。
-- `AIClassificationBranch.children.links` 使用 `kind: "case"`；普通分类使用 `branch_1`、`branch_2` 等标签，默认分支使用 `label: "default"`。
-- `classes[i].name` 与对应普通分支 `children.links[i].desc` 保持一致；缺省或 `no_match_action: "classifyToOther"` 时必须提供默认分支。
-
-**`no_match_action: "fail"` 差异**：当没有匹配分类时需要让当前节点失败，只修改以下部分；普通分类边和 `classes` / `content` 保持不变。
-
-```diff
- "data": {
-+  "no_match_action": "fail"
- }
- "children": {
-   "links": [
--    { "kind": "case", "to": "step_other_action", "label": "default", "desc": "默认分支" }
-   ]
- }
-```
-
-如果 `step_other_action` 仅由默认分支引用，应同时从 `steps` 中删除该节点。
+关键点：`classes` 按顺序对应 `branch_1`、`branch_2`；`desc` 与分类名一致，`to` 指向已定义的下游 step；缺省无匹配策略使用 `default` 边。
 
 ---
 

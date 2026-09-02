@@ -611,6 +611,7 @@
 - 每个分类命中后要跳到哪个后续步骤，必须写在 children.links 中。
 - 普通分类边使用 `kind: "case"` 和 `label: "branch_1"`、`branch_2` 等稳定标签；`desc` 与 `classes[i].name` 保持一致；`to` 指向该分类的入口 step。
 - `no_match_action: "classifyToOther"` 时必须额外提供一条默认分支边：`{ "kind": "case", "label": "default", "desc": "默认分支", "to": "step_other_action" }`。
+- `no_match_action: "fail"` 时不要提供默认分支边。
 
 
 ## System data 详细结构
