@@ -55,13 +55,12 @@
 | 场景 | 步骤组合 | 示例 |
 |------|---------|------|
 | 新增触发+通知 | AddRecordTrigger → LarkMessageAction | [下方](#示例-1-新增记录触发--发送消息) |
-| 定时触发+AI 分析 | TimerTrigger → AIAnalysisAction | [下方](#示例-7-ai-分析定时分析-base-数据并回读核验) |
 | 按钮点击+调用外部接口+写入日志 | ButtonTrigger → HTTPClientAction → AddRecordAction | [下方](#示例-6-按钮触发--调用外部接口--写入同步日志) |
 | 定时+循环 | TimerTrigger → FindRecordAction → Loop → LarkMessageAction | [下方](#示例-2-定时触发--查找记录--循环遍历--发送消息) |
 | 条件判断 | ... → IfElseBranch → 分支处理 | [下方](#示例-3-条件分支ifelsebranch) |
 | 多路分类 | ... → SwitchBranch → 多分支处理 | [下方](#示例-4-多路分支switchbranch) |
-| AI 分类 | ... → AIClassificationBranch → 分类后处理 | [下方](#示例-8-ai-分类用户反馈自动分流) |
 | 复杂组合 | 定时+查找+循环+分支+消息 | [下方](#示例-5-组合场景定时查找循环分支消息) |
+| AI 分类 | ... → AIClassificationBranch → 分类后处理 | [下方](#示例-7-ai-分类用户反馈自动分流) |
 
 ---
 
@@ -743,51 +742,7 @@
 
 ---
 
-### 示例 7: AI 分析（定时分析 Base 数据）
-
-**场景**: 每天早上 9 点分析「订单表」和「退款表」的昨日趋势。
-
-```json
-{
-  "client_token": "1704067200-ai-analysis",
-  "title": "每日经营 AI 分析",
-  "steps": [
-    {
-      "id": "step_timer",
-      "type": "TimerTrigger",
-      "title": "每天早上 9 点触发",
-      "next": "step_ai_analysis",
-      "data": {
-        "rule": "DAILY",
-        "start_time": "2025-01-01 09:00",
-        "is_never_end": true
-      }
-    },
-    {
-      "id": "step_ai_analysis",
-      "type": "AIAnalysisAction",
-      "title": "分析昨日经营异常",
-      "next": null,
-      "data": {
-        "analysis_task": [
-          { "value_type": "text", "value": "分析昨日订单趋势、退款异常和可能原因，并给出今日行动建议" }
-        ],
-        "analysis_table_names": ["订单表", "退款表"],
-        "identity_type": "maker",
-        "output_instruction": "先给结论，再列证据与行动建议"
-      }
-    }
-  ]
-}
-```
-
-**关键点**:
-- `analysis_table_names: []` 表示当前 Base 的全部数据表；若要限制范围，请显式列出表名。
-- `identity_type: "maker"` 表示固定流程身份；`identity_type: "triggerPersonal"` 仅适用于能提供真实触发者身份的触发器。
-
----
-
-### 示例 8: AI 分类（用户反馈自动分流）
+### 示例 7: AI 分类（用户反馈自动分流）
 
 **场景**: 当用户反馈表新增记录时，AI 根据反馈内容分类为 Bug、功能建议或体验问题；无法判断时进入其他分支并通知人工复核。
 
