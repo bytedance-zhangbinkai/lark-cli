@@ -598,14 +598,14 @@
 }
 ```
 
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| `classes` | 是 | 分类列表，至少 2 项。每项包含 `name` 和 `desc` |
-| `classes[].name` | 是 | 分类名称，需与对应普通 `children.links[].desc` 保持一致 |
-| `classes[].desc` | 是 | 分类描述，可为空字符串，但字段必须存在 |
-| `content` | 是 | TextRefItem[]，用于分类的内容，支持 `text` / `ref` |
-| `classification_rule` | 否 | 全局分类规则纯文本 |
-| `no_match_action` | 否 | 无匹配策略。`classifyToOther`：进入默认分支；`fail`：当前节点失败。创建缺省时使用 `classifyToOther`，更新缺省时保留既有配置 |
+| 字段 | 必填 | 说明                                                                   |
+|------|------|----------------------------------------------------------------------|
+| `classes` | 是 | 分类列表，至少 2 项。每项包含 `name` 和 `desc`                                     |
+| `classes[].name` | 是 | 分类名称，需与对应普通 `children.links[].desc` 保持一致                             |
+| `classes[].desc` | 是 | 分类描述，可为空字符串，但字段必须存在                                                  |
+| `content` | 是 | TextRefItem[]，用于分类的内容，支持 `text` / `ref`                              |
+| `classification_rule` | 否 | 全局分类规则纯文本                                                            |
+| `no_match_action` | 否 | 无匹配策略。`classifyToOther`：进入默认分支；`fail`：当前节点失败。省略时使用 `classifyToOther` |
 
 `children.links` 规则：
 - 每个分类命中后要跳到哪个后续步骤，必须写在 children.links 中。

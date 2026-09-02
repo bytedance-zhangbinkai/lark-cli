@@ -25,7 +25,7 @@ func indexWorkflowStepIDs(steps []interface{}) map[string]int {
 	return stepIDs
 }
 
-func validateWorkflowAIClassificationStep(index int, step map[string]interface{}, stepIDs map[string]int, operation workflowWriteOperation) error {
+func validateWorkflowAIClassificationStep(index int, step map[string]interface{}, stepIDs map[string]int) error {
 	path := fmt.Sprintf("--json steps[%d]", index)
 	data, ok := step["data"].(map[string]interface{})
 	if !ok || data == nil {
@@ -35,7 +35,7 @@ func validateWorkflowAIClassificationStep(index int, step map[string]interface{}
 	if err != nil {
 		return err
 	}
-	return validateAIClassificationLinks(path, step, stepIDs, classes, aiClassificationNoMatchAction(data, operation))
+	return validateAIClassificationLinks(path, step, stepIDs, classes, aiClassificationNoMatchAction(data))
 }
 
 func validateAIClassificationAgentData(path string, data map[string]interface{}, stepIndex int, stepIDs map[string]int) ([]string, error) {
@@ -192,9 +192,6 @@ func validateAIClassificationLinks(path string, step map[string]interface{}, ste
 	if ordinaryLinks != len(classes) {
 		return baseValidationErrorf("%s.children.links must contain one non-empty case link for each class", path)
 	}
-	if noMatchAction == "" && defaultLinks > 1 {
-		return baseValidationErrorf("%s.children.links must contain at most one default link when no_match_action is omitted during update", path)
-	}
 	if noMatchAction == "classifyToOther" && defaultLinks != 1 {
 		return baseValidationErrorf("%s.children.links must contain exactly one default link when no_match_action is classifyToOther", path)
 	}
@@ -204,14 +201,12 @@ func validateAIClassificationLinks(path string, step map[string]interface{}, ste
 	return nil
 }
 
-func aiClassificationNoMatchAction(data map[string]interface{}, operation workflowWriteOperation) string {
+func aiClassificationNoMatchAction(data map[string]interface{}) string {
 	action, _ := data["no_match_action"].(string)
 	action = strings.TrimSpace(action)
-	if action == "" && operation == workflowWriteCreate {
+	if action == "" {
 		return workflowAIClassificationDefaultNoMatchAction
 	}
-	// Update omission preserves the stored setting, which cannot be inferred
-	// from the replacement body alone. Leave it unset for link validation.
 	return action
 }
 

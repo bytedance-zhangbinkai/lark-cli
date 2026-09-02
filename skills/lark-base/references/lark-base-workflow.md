@@ -834,7 +834,6 @@
 ```
 **关键点**:
 - `classes` 按顺序对应 `branch_1`、`branch_2`；`desc` 与分类名一致，`to` 指向已定义的下游 step；
-- 创建时省略 no_match_action 等同于 classifyToOther，必须提供 default 边；更新时省略会保留既有策略。
 
 ---
 

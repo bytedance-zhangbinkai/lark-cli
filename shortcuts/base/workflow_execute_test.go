@@ -406,68 +406,127 @@ func TestBaseWorkflowExecuteUpdatePreservesAIClassificationWithoutMode(t *testin
 	}
 }
 
-func TestBaseWorkflowExecuteUpdatePreservesOmittedAIClassificationFailWithoutDefault(t *testing.T) {
-	factory, stdout, reg := newExecuteFactory(t)
-	stub := &httpmock.Stub{
-		Method: "PUT",
-		URL:    "/open-apis/base/v3/bases/app_x/workflows/wkf_1",
-		Body: map[string]interface{}{
-			"code": 0,
-			"data": map[string]interface{}{"workflow_id": "wkf_1", "title": "Language classify"},
+func TestBaseWorkflowExecuteUpdateValidatesAIClassificationNoMatchActionTopology(t *testing.T) {
+	body := func(noMatchAction string, links string) string {
+		return `{
+			"title": "Language classify",
+			"steps": [
+				{"id": "step_trigger", "type": "AddRecordTrigger", "next": "step_classify", "data": {}},
+				{
+					"id": "step_classify",
+					"type": "AIClassificationBranch",
+					"children": {"links":` + links + `},
+					"data": {
+						"classes": [
+							{"name": "English", "desc": "English text"},
+							{"name": "Chinese", "desc": "Chinese text"}
+						],
+						"content": [{"value_type": "text", "value": "Classify"}]` + noMatchAction + `
+					}
+				},
+				{"id": "step_english", "type": "SetRecordAction", "next": null, "data": {}},
+				{"id": "step_chinese", "type": "SetRecordAction", "next": null, "data": {}},
+				{"id": "step_other", "type": "SetRecordAction", "next": null, "data": {}},
+				{"id": "step_other_2", "type": "SetRecordAction", "next": null, "data": {}}
+			]
+		}`
+	}
+	caseLinks := `[
+		{"kind":"case","label":"branch_1","desc":"English","to":"step_english"},
+		{"kind":"case","label":"branch_2","desc":"Chinese","to":"step_chinese"}
+	]`
+	defaultLinks := `[
+		{"kind":"case","label":"branch_1","desc":"English","to":"step_english"},
+		{"kind":"case","label":"branch_2","desc":"Chinese","to":"step_chinese"},
+		{"kind":"case","label":"default","desc":"Other","to":"step_other"}
+	]`
+	multipleDefaultLinks := `[
+		{"kind":"case","label":"branch_1","desc":"English","to":"step_english"},
+		{"kind":"case","label":"branch_2","desc":"Chinese","to":"step_chinese"},
+		{"kind":"case","label":"default","desc":"Other","to":"step_other"},
+		{"kind":"case","label":"default","desc":"Other 2","to":"step_other_2"}
+	]`
+
+	tests := []struct {
+		name          string
+		noMatchAction string
+		links         string
+		want          string
+		wantForwarded string
+	}{
+		{
+			name:  "rejects omitted action without default link",
+			links: caseLinks,
+			want:  "children.links must contain exactly one default link when no_match_action is classifyToOther",
+		},
+		{
+			name:          "accepts omitted action with one default link without injection",
+			links:         defaultLinks,
+			wantForwarded: `"label":"default"`,
+		},
+		{
+			name:          "accepts explicit fail without default link",
+			noMatchAction: `,"no_match_action":"fail"`,
+			links:         caseLinks,
+			wantForwarded: `"no_match_action":"fail"`,
+		},
+		{
+			name:          "rejects explicit fail with default link",
+			noMatchAction: `,"no_match_action":"fail"`,
+			links:         defaultLinks,
+			want:          "children.links must not contain a default link when no_match_action is fail",
+		},
+		{
+			name:          "accepts explicit classifyToOther with one default link",
+			noMatchAction: `,"no_match_action":"classifyToOther"`,
+			links:         defaultLinks,
+			wantForwarded: `"no_match_action":"classifyToOther"`,
+		},
+		{
+			name:          "rejects explicit classifyToOther without default link",
+			noMatchAction: `,"no_match_action":"classifyToOther"`,
+			links:         caseLinks,
+			want:          "children.links must contain exactly one default link when no_match_action is classifyToOther",
+		},
+		{
+			name:  "rejects omitted action with multiple default links",
+			links: multipleDefaultLinks,
+			want:  "children.links must contain exactly one default link when no_match_action is classifyToOther",
 		},
 	}
-	reg.Register(stub)
 
-	body := `{
-		"title": "Language classify",
-		"status": "enabled",
-		"steps": [
-			{"id": "step_trigger", "type": "AddRecordTrigger", "next": "step_classify", "data": {}},
-			{
-				"id": "step_classify",
-				"type": "AIClassificationBranch",
-				"children": {"links":[
-					{"kind":"case","label":"branch_1","desc":"English","to":"step_english"},
-					{"kind":"case","label":"branch_2","desc":"Chinese","to":"step_chinese"}
-				]},
-				"data": {
-					"classes": [
-						{"name": "English", "desc": "English text"},
-						{"name": "Chinese", "desc": "Chinese text"}
-					],
-					"content": [{"value_type": "text", "value": "Classify"}]
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory, stdout, _ := newExecuteFactory(t)
+			err := runShortcut(t, BaseWorkflowUpdate, []string{
+				"+workflow-update",
+				"--base-token", "app_x",
+				"--workflow-id", "wkf_1",
+				"--json", body(tt.noMatchAction, tt.links),
+				"--dry-run",
+				"--format", "pretty",
+			}, factory, stdout)
+			if tt.want != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.want) {
+					t.Fatalf("err=%v want substring %q", err, tt.want)
 				}
-			},
-			{"id": "step_english", "type": "SetRecordAction", "next": null, "data": {}},
-			{"id": "step_chinese", "type": "SetRecordAction", "next": null, "data": {}}
-		]
-	}`
-	if err := runShortcut(t, BaseWorkflowUpdate, []string{"+workflow-update", "--base-token", "app_x", "--workflow-id", "wkf_1", "--json", body}, factory, stdout); err != nil {
-		t.Fatalf("err=%v", err)
-	}
-	got := string(stub.CapturedBody)
-	if strings.Contains(got, `"no_match_action"`) || strings.Contains(got, `"label":"default"`) {
-		t.Fatalf("update should preserve omitted fail semantics without injecting a default branch: %s", got)
-	}
-
-	dryRunFactory, dryRunStdout, _ := newExecuteFactory(t)
-	dryRunArgs := []string{
-		"+workflow-update",
-		"--base-token", "app_x",
-		"--workflow-id", "wkf_1",
-		"--json", body,
-		"--dry-run",
-		"--format", "pretty",
-	}
-	if err := runShortcut(t, BaseWorkflowUpdate, dryRunArgs, dryRunFactory, dryRunStdout); err != nil {
-		t.Fatalf("dry-run err=%v", err)
-	}
-	dryRun := dryRunStdout.String()
-	if !strings.Contains(dryRun, "PUT /open-apis/base/v3/bases/app_x/workflows/wkf_1") {
-		t.Fatalf("dry-run missing update request: %s", dryRun)
-	}
-	if strings.Contains(dryRun, `"no_match_action"`) || strings.Contains(dryRun, `"label": "default"`) {
-		t.Fatalf("dry-run should preserve omitted fail semantics without injecting a default branch: %s", dryRun)
+				var validationErr *errs.ValidationError
+				if !errors.As(err, &validationErr) {
+					t.Fatalf("err type=%T want *errs.ValidationError", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("dry-run err=%v", err)
+			}
+			dryRun := stdout.String()
+			if !strings.Contains(dryRun, "PUT /open-apis/base/v3/bases/app_x/workflows/wkf_1") || !strings.Contains(dryRun, tt.wantForwarded) {
+				t.Fatalf("dry-run did not preserve the validated request: %s", dryRun)
+			}
+			if tt.noMatchAction == "" && strings.Contains(dryRun, `"no_match_action"`) {
+				t.Fatalf("dry-run must not inject omitted no_match_action: %s", dryRun)
+			}
+		})
 	}
 }
 
