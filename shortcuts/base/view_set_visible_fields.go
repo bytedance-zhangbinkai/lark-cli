@@ -24,6 +24,7 @@ var BaseViewSetVisibleFields = common.Shortcut{
 	},
 	Tips: []string{
 		"Supported view types: grid, kanban, gallery, calendar, gantt and form.",
+		"For form views, use field IDs.",
 		"Use a JSON object, not a bare array; primary field may be forced to the first position by the API.",
 		"visible_fields controls both visibility and order; include every field that should remain visible.",
 	},
