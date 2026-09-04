@@ -123,12 +123,30 @@ func validateFormulaLookupGuideAck(runtime *common.RuntimeContext, command strin
 	return nil
 }
 
+func validateFieldActionKeys(body map[string]interface{}) error {
+	for _, key := range []string{"action", "action_type", "target"} {
+		if _, exists := body[key]; exists {
+			return errs.NewValidationError(errs.SubtypeUnsupportedParameter, "button action is not part of field schema; use +button-rule-bind --target-json").WithParam("--json")
+		}
+	}
+	buttonConfig, _ := body["button_config"].(map[string]interface{})
+	for _, key := range []string{"action", "action_type", "target"} {
+		if _, exists := buttonConfig[key]; exists {
+			return errs.NewValidationError(errs.SubtypeUnsupportedParameter, "button action is not part of field schema; use +button-rule-bind --target-json").WithParam("--json")
+		}
+	}
+	return nil
+}
+
 func validateFieldCreate(runtime *common.RuntimeContext) error {
 	bodies, err := parseFieldCreateBodies(newParseCtx(runtime), runtime.Str("json"))
 	if err != nil {
 		return err
 	}
 	for _, body := range bodies {
+		if err := validateFieldActionKeys(body); err != nil {
+			return err
+		}
 		if err := validateFormulaLookupGuideAck(runtime, "+field-create", body); err != nil {
 			return err
 		}
@@ -139,6 +157,9 @@ func validateFieldCreate(runtime *common.RuntimeContext) error {
 func validateFieldUpdate(runtime *common.RuntimeContext) error {
 	body, err := validateFieldJSON(runtime)
 	if err != nil {
+		return err
+	}
+	if err := validateFieldActionKeys(body); err != nil {
 		return err
 	}
 	return validateFormulaLookupGuideAck(runtime, "+field-update", body)
